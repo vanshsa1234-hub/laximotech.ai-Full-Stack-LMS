@@ -1,0 +1,105 @@
+// C:\Users\LENOVO\Downloads\laximotech(project)\laximotech7\apps\api\src\courses\courses.controller.ts
+import { Controller, Get, Post, Patch, Param, Query, Body, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { CoursesService }  from './courses.service';
+import { Public }          from '../auth/decorators/public.decorator';
+import { JwtAuthGuard }    from '../auth/guards/jwt-auth.guard';
+import { RolesGuard }      from '../auth/guards/roles.guard';
+import { Roles }           from '../auth/decorators/roles.decorator';
+import { CurrentUser }     from '../auth/decorators/current-user.decorator';
+import { Role }            from '@prisma/client';
+
+@ApiTags('Courses')
+@Controller('courses')
+export class CoursesController {
+  constructor(private courses: CoursesService) {}
+
+  @Public()
+  @Get()
+  findAll(@Query() query: Record<string, string>) {
+    return this.courses.findAll(query);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN, Role.INSTRUCTOR)
+  @Get('admin/:courseId/builder')
+  getBuilder(@Param('courseId') courseId: string) {
+    return this.courses.getBuilder(courseId);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN, Role.INSTRUCTOR)
+  @Post('admin/:courseId/sections')
+  createSection(@Param('courseId') courseId: string, @Body() body: any) {
+    return this.courses.createSection(courseId, body);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN, Role.INSTRUCTOR)
+  @Patch('admin/sections/:sectionId')
+  updateSection(@Param('sectionId') sectionId: string, @Body() body: any) {
+    return this.courses.updateSection(sectionId, body);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN, Role.INSTRUCTOR)
+  @Post('admin/sections/:sectionId/lessons')
+  createLesson(@Param('sectionId') sectionId: string, @Body() body: any) {
+    return this.courses.createLesson(sectionId, body);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN, Role.INSTRUCTOR)
+  @Patch('admin/lessons/:lessonId')
+  updateLesson(@Param('lessonId') lessonId: string, @Body() body: any) {
+    return this.courses.updateLesson(lessonId, body);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN, Role.INSTRUCTOR)
+  @Post('admin/lessons/:lessonId/quiz')
+  upsertLessonQuiz(@Param('lessonId') lessonId: string, @Body() body: any) {
+    return this.courses.upsertLessonQuiz(lessonId, body);
+  }
+
+
+  // Admin only — includes drafts/unpublished courses
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN, Role.INSTRUCTOR)
+  @Get('admin/all')
+  findAllAdmin(@Query() query: Record<string, string>) {
+    return this.courses.findAllForAdmin(query);
+  }
+
+  @Public()
+  @Get(':slug')
+  findOne(@Param('slug') slug: string) {
+    return this.courses.findBySlug(slug);
+  }
+
+  // Admin only
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN, Role.INSTRUCTOR)
+  @Post()
+  create(@CurrentUser() user: any, @Body() body: any) {
+    // instructorId always derives from the logged-in admin/instructor —
+    // never trusted from the request body.
+    return this.courses.create({ ...body, instructorId: user.id });
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN, Role.INSTRUCTOR)
+  @Patch(':id')
+  update(@Param('id') id: string, @Body() body: any) {
+    return this.courses.update(id, body);
+  }
+}

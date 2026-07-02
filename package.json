@@ -1,0 +1,25 @@
+{
+  "name": "laximotech",
+  "private": true,
+  "workspaces": ["apps/*", "packages/*"],
+  "scripts": {
+    "dev":        "turbo run dev",
+    "build":      "turbo run build",
+    "lint":       "turbo run lint",
+    "type-check": "turbo run type-check",
+    "db:push":    "dotenv -e apps/api/.env -- npx prisma db push --schema apps/api/prisma/schema.prisma",
+    "db:migrate": "dotenv -e apps/api/.env -- npx prisma migrate dev --schema apps/api/prisma/schema.prisma",
+    "db:seed":    "dotenv -e apps/api/.env -- npx ts-node --project apps/api/tsconfig.json -e \"require('./apps/api/prisma/seed.ts')\"",
+    "db:studio":  "dotenv -e apps/api/.env -- npx prisma studio --schema apps/api/prisma/schema.prisma",
+    "db:reset":   "dotenv -e apps/api/.env -- npx prisma db push --force-reset --schema apps/api/prisma/schema.prisma",
+    "format":     "prettier --write \"**/*.{ts,tsx,json,css,md}\""
+  },
+  "devDependencies": {
+    "dotenv-cli":  "^7.4.2",
+    "turbo":       "^1.13.0",
+    "prettier":    "^3.2.5",
+    "typescript":  "^5.4.5"
+  },
+  "engines": { "node": ">=20.0.0" },
+  "packageManager": "npm@10.5.0"
+}

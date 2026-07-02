@@ -1,0 +1,92 @@
+{
+  "nav": {
+    "courses":     "Courses",
+    "paths":       "Career Paths",
+    "blog":        "Blog",
+    "demo":        "Demo Class",
+    "login":       "Log In",
+    "signup":      "Start Learning — Free",
+    "dashboard":   "Dashboard",
+    "logout":      "Sign Out"
+  },
+  "hero": {
+    "badge":       "India's Most Affordable AI Courses — Starting at",
+    "price":       "Rs 399",
+    "headline":    "Build Your Future with AI & Tech —",
+    "headlineOrange": "Starting at Just Rs 399",
+    "sub":         "Learn AI, Machine Learning, Data Science, Robotics & Cybersecurity. Get a verifiable certificate. Become job-ready in months, not years.",
+    "searchPlaceholder": "What do you want to learn? e.g. Python, AI, Data Science...",
+    "cta":         "Browse All Courses",
+    "demo":        "Free Demo Class"
+  },
+  "auth": {
+    "login":            "Log In",
+    "signup":           "Sign Up",
+    "google":           "Continue with Google",
+    "password":         "Password",
+    "magicLink":        "Magic Link",
+    "emailLabel":       "Email address",
+    "passwordLabel":    "Password",
+    "nameLabel":        "Full Name",
+    "confirmPassword":  "Confirm Password",
+    "forgotPassword":   "Forgot password?",
+    "createAccount":    "Create Account",
+    "sendMagicLink":    "Send Magic Link",
+    "checkEmail":       "Check your email!",
+    "terms":            "By continuing, you agree to our",
+    "termsLink":        "Terms",
+    "privacyLink":      "Privacy Policy"
+  },
+  "dashboard": {
+    "welcome":          "Welcome",
+    "continueLearning": "Continue Learning",
+    "myProgress":       "My Progress",
+    "certificates":     "Certificates",
+    "leaderboard":      "Leaderboard",
+    "streak":           "day streak",
+    "xpPoints":         "XP Points",
+    "enrolled":         "Enrolled",
+    "completed":        "Completed",
+    "weeklyGoal":       "Weekly Goal",
+    "lessonsToGo":      "more lesson to hit your goal!"
+  },
+  "course": {
+    "enrollNow":      "Enroll Now",
+    "startLearning":  "Start Learning",
+    "freeDemoLesson": "Free Preview",
+    "lifetime":       "Lifetime access",
+    "certificate":    "Certificate of completion",
+    "refund":         "30-day money-back guarantee",
+    "whatYouLearn":   "What You'll Learn",
+    "curriculum":     "Course Curriculum",
+    "sections":       "sections",
+    "lessons":        "lessons",
+    "totalHours":     "h total"
+  },
+  "quiz": {
+    "startQuiz":   "Start Quiz",
+    "submitQuiz":  "Submit Quiz",
+    "tryAgain":    "Try Again",
+    "passed":      "Passed!",
+    "failed":      "Not passed this time",
+    "score":       "Score",
+    "xpEarned":    "XP earned!",
+    "question":    "Question",
+    "of":          "of",
+    "answered":    "answered"
+  },
+  "ai": {
+    "placeholder": "Type your question...",
+    "online":      "Online",
+    "languages":   "Hindi + English",
+    "limit":       "20 messages/day free"
+  },
+  "errors": {
+    "notFound":    "Page Not Found",
+    "notFoundDesc":"This page doesn't exist.",
+    "goHome":      "Go Home",
+    "offline":     "You're Offline",
+    "offlineDesc": "No internet connection.",
+    "tryAgain":    "Try Again"
+  }
+}
