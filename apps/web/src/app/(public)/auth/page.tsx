@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { signIn }   from 'next-auth/react';
-import { useRouter } from 'next/navigation';
+import { signIn, getSession } from 'next-auth/react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import {
@@ -63,6 +63,8 @@ function Field({
 
 export default function AuthPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get('callbackUrl'); // set by middleware when bounced from a protected route
 
   const [mode,      setMode]      = useState<Mode>('login');
   const [method,    setMethod]    = useState<Method>('password');
@@ -92,7 +94,7 @@ export default function AuthPage() {
 
   const handleGoogle = async () => {
     setLoading('google');
-    await signIn('google', { callbackUrl: '/dashboard' });
+    await signIn('google', { callbackUrl: callbackUrl || '/post-login' });
   };
 
   const handlePasswordAuth = async (e: React.FormEvent) => {
@@ -110,7 +112,17 @@ export default function AuthPage() {
       }
       clearTokenCache(); // ensure the very next API call fetches a fresh token, not a stale cached null
       toast.success(mode === 'signup' ? 'Account created! Welcome 🎉' : 'Welcome back! 👋');
-      router.push('/dashboard');
+
+      // If we were bounced here from a protected route (e.g. /admin), go back
+      // there — middleware will re-verify role on arrival either way.
+      // Otherwise, send admins straight to the admin panel, everyone else to
+      // their dashboard.
+      let destination = callbackUrl || '/dashboard';
+      if (!callbackUrl) {
+        const freshSession = await getSession();
+        if ((freshSession?.user as any)?.role === 'ADMIN') destination = '/admin';
+      }
+      router.push(destination);
       router.refresh();
     } catch (err: any) {
       const msg = err?.response?.data?.message ?? 'Something went wrong. Please try again.';
@@ -124,7 +136,7 @@ export default function AuthPage() {
     e.preventDefault();
     if (!validateEmail(email)) { setErrors({ email: 'Valid email required' }); return; }
     setLoading('magic');
-    await signIn('resend', { email, callbackUrl: '/dashboard', redirect: false });
+    await signIn('resend', { email, callbackUrl: callbackUrl || '/post-login', redirect: false });
     setMode('forgot-sent');
     setLoading(null);
   };

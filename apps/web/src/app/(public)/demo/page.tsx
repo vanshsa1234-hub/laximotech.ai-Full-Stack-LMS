@@ -5,11 +5,14 @@ import { Navbar } from '@/components/layout/navbar';
 import { Footer } from '@/components/layout/footer';
 import { Calendar, Clock, Video, MapPin, Check, Loader2, CheckCircle, Users, Star } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { demoRequestsApi } from '@/lib/api';
+import { usePlatformStats } from '@/hooks/use-queries';
 
 const SLOTS = ['10:00 AM', '12:00 PM', '2:00 PM', '4:00 PM', '6:00 PM', '8:00 PM'];
 const TOPICS = ['AI & Machine Learning', 'Data Science', 'Python Programming', 'Cybersecurity', 'Robotics & IoT', 'Career Guidance'];
 
 export default function DemoPage() {
+  const { data: stats } = usePlatformStats();
   const [form, setForm] = useState({ name: '', phone: '', email: '', topic: '', slot: '', mode: 'online' });
   const [loading, setLoading] = useState(false);
   const [booked,  setBooked]  = useState(false);
@@ -18,9 +21,14 @@ export default function DemoPage() {
     e.preventDefault();
     if (!form.slot) { toast.error('Please select a time slot'); return; }
     setLoading(true);
-    await new Promise(r => setTimeout(r, 1200));
-    setLoading(false);
-    setBooked(true);
+    try {
+      await demoRequestsApi.create(form);
+      setBooked(true);
+    } catch (err) {
+      toast.error('Something went wrong. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -67,22 +75,27 @@ export default function DemoPage() {
                 </div>
               </div>
 
-              {/* Social proof */}
-              <div className="bg-white rounded-2xl p-5 shadow-card border border-gray-100">
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="flex">
-                    {[...Array(5)].map((_, i) => <Star key={i} size={14} className="fill-yellow-400 text-yellow-400" />)}
+              {/* Social proof — real numbers only, no fabricated testimonial */}
+              {(stats as any)?.avgRating != null && (
+                <div className="bg-white rounded-2xl p-5 shadow-card border border-gray-100">
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className="flex">
+                      {[1,2,3,4,5].map(s => (
+                        <Star key={s} size={14} className={(stats as any).avgRating >= s ? 'fill-yellow-400 text-yellow-400' : 'fill-gray-200 text-gray-200'} />
+                      ))}
+                    </div>
+                    <span className="text-sm font-semibold text-gray-900">{(stats as any).avgRating.toFixed(1)}/5</span>
                   </div>
-                  <span className="text-sm font-semibold text-gray-900">4.9/5</span>
+                  <p className="text-gray-500 text-xs">Average course rating from {(stats as any).totalReviews} real student reviews.</p>
                 </div>
-                <p className="text-gray-500 text-sm italic">"Demo class ke baad main convince ho gaya. Instructor ne itna clear explain kiya — turant course le liya!"</p>
-                <div className="text-gray-400 text-xs mt-2">— Arjun Sharma, Greater Noida</div>
-              </div>
+              )}
 
               <div className="bg-brand-blue/5 border border-brand-blue/20 rounded-2xl p-5">
                 <div className="flex items-center gap-2 mb-2">
                   <Users size={16} className="text-brand-blue" />
-                  <span className="font-semibold text-brand-blue text-sm">500+ Demo Classes Done</span>
+                  <span className="font-semibold text-brand-blue text-sm">
+                    {(stats as any)?.totalDemoRequests > 0 ? `${(stats as any).totalDemoRequests}+ Demo Classes Requested` : 'Book Your First Demo Class'}
+                  </span>
                 </div>
                 <p className="text-gray-500 text-xs">Every week we do free demo sessions for students across India.</p>
               </div>

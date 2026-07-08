@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Navbar } from '@/components/layout/navbar';
 import { Footer } from '@/components/layout/footer';
 import { CourseCard } from '@/components/courses/course-card';
@@ -41,7 +42,13 @@ export default function CareerPathPage({ params }: { params: { slug: string } })
               <ArrowLeft size={14}/> All Career Paths
             </Link>
             <motion.div initial={{opacity:0,y:20}} animate={{opacity:1,y:0}}>
-              <div className="text-5xl mb-4">{EMOJI[params.slug]??'🎯'}</div>
+              {p.iconUrl ? (
+                <div className="relative w-16 h-16 mb-4 rounded-2xl overflow-hidden border border-white/20">
+                  <Image src={p.iconUrl} alt={p.title} fill className="object-cover" />
+                </div>
+              ) : (
+                <div className="text-5xl mb-4">{EMOJI[params.slug]??'🎯'}</div>
+              )}
               <h1 className="font-heading font-bold text-white text-4xl md:text-5xl mb-4">{p.title}</h1>
               <p className="text-white/75 text-lg max-w-2xl mb-8 leading-relaxed">{p.description}</p>
               <div className="flex flex-wrap gap-4">

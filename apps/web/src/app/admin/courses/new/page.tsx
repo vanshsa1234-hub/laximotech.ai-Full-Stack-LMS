@@ -6,6 +6,8 @@ import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { ArrowLeft, Save, Loader2 } from 'lucide-react';
 import { coursesApi } from '@/lib/api';
+import { useAdminInstructors } from '@/hooks/use-queries';
+import { ImageUpload } from '@/components/admin/image-upload';
 import toast from 'react-hot-toast';
 
 const CATEGORIES = ['AI_ML', 'DATA_SCIENCE', 'PROGRAMMING', 'ROBOTICS_IOT', 'CYBERSECURITY_CLOUD'];
@@ -17,11 +19,13 @@ function slugify(title: string) {
 
 export default function NewCoursePage() {
   const router = useRouter();
+  const { data: instructors } = useAdminInstructors();
+  const instructorList = (instructors as any[]) ?? [];
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
     title: '', shortDesc: '', description: '',
     price: 399, level: 'BEGINNER', category: 'AI_ML',
-    language: 'Hindi + English', durationHrs: 30,
+    language: 'Hindi + English', durationHrs: 30, instructorId: '', thumbnailUrl: '',
   });
 
   const slug = slugify(form.title);
@@ -44,7 +48,8 @@ export default function NewCoursePage() {
         category:    form.category,
         language:    form.language,
         durationHrs: Number(form.durationHrs),
-        instructorId: '', // overwritten server-side from logged-in admin
+        ...(form.thumbnailUrl && { thumbnailUrl: form.thumbnailUrl }),
+        ...(form.instructorId && { instructorId: form.instructorId }),
       });
       toast.success('Course created! Open Builder to add sections, lessons, videos, and quizzes.');
       router.push('/admin/courses');
@@ -87,6 +92,28 @@ export default function NewCoursePage() {
           <textarea value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
             rows={4} placeholder="Full course description shown on the detail page"
             className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-white text-sm outline-none focus:border-brand-orange resize-none" />
+        </div>
+
+        <ImageUpload
+          label="Course Thumbnail (shown on the course card)"
+          value={form.thumbnailUrl}
+          onChange={url => setForm(p => ({ ...p, thumbnailUrl: url }))}
+          aspectClassName="aspect-video"
+          helpText="Recommended: 800×450px, under 5MB."
+        />
+
+        <div>
+          <label className="block text-xs font-semibold text-gray-400 mb-1.5">Instructor</label>
+          <select value={form.instructorId} onChange={e => setForm(p => ({ ...p, instructorId: e.target.value }))}
+            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-white text-sm outline-none focus:border-brand-orange">
+            <option value="">Assign to myself (default)</option>
+            {instructorList.map(ins => (
+              <option key={ins.id} value={ins.id}>{ins.name} ({ins.role})</option>
+            ))}
+          </select>
+          <p className="text-xs text-gray-500 mt-1">
+            Don't see the right person? <Link href="/admin/instructors" className="text-brand-orange hover:underline">Add an instructor first</Link>.
+          </p>
         </div>
 
         <div className="grid grid-cols-2 gap-4">

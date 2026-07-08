@@ -69,7 +69,70 @@ export class BlogService {
     });
   }
 
-  async update(id: string, data: Partial<{ title: string; excerpt: string; content: string; coverImage: string; metaTitle: string; metaDesc: string }>) {
-    return this.prisma.blogPost.update({ where: { id }, data });
+  async unpublish(id: string) {
+    return this.prisma.blogPost.update({
+      where: { id },
+      data:  { isPublished: false },
+    });
+  }
+
+  async update(id: string, data: Partial<{
+    title: string; excerpt: string; content: string; coverImage: string;
+    metaTitle: string; metaDesc: string; tags: string[];
+  }>) {
+    const { tags, ...rest } = data;
+    return this.prisma.blogPost.update({
+      where: { id },
+      data: {
+        ...rest,
+        ...(tags && {
+          tags: {
+            set: [],
+            connectOrCreate: tags.map(t => ({
+              where:  { name: t },
+              create: { name: t },
+            })),
+          },
+        }),
+      },
+    });
+  }
+
+  async remove(id: string) {
+    return this.prisma.blogPost.delete({ where: { id } });
+  }
+
+  // ── Admin ──────────────────────────────────────────────────
+  async findAllAdmin(query: { page?: string; pageSize?: string; status?: string }) {
+    const page     = Math.max(1, parseInt(query.page ?? '1'));
+    const pageSize = Math.min(50, parseInt(query.pageSize ?? '20'));
+    const skip     = (page - 1) * pageSize;
+    const where: any = {
+      ...(query.status === 'published' && { isPublished: true }),
+      ...(query.status === 'draft' && { isPublished: false }),
+    };
+
+    const [posts, total] = await this.prisma.$transaction([
+      this.prisma.blogPost.findMany({
+        where, skip, take: pageSize,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          author: { select: { id: true, name: true } },
+          tags:   { select: { name: true } },
+        },
+      }),
+      this.prisma.blogPost.count({ where }),
+    ]);
+
+    return { data: posts, total, page, pageSize, totalPages: Math.ceil(total / pageSize) };
+  }
+
+  async findById(id: string) {
+    const post = await this.prisma.blogPost.findUnique({
+      where: { id },
+      include: { tags: { select: { name: true } } },
+    });
+    if (!post) throw new NotFoundException(`Blog post not found.`);
+    return post;
   }
 }

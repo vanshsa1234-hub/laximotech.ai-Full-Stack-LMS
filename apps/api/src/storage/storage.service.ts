@@ -13,6 +13,7 @@ import { v4 as uuid } from 'uuid';
 export class StorageService {
   private s3:      S3Client;
   private bucket:  string;
+  private region:  string;
   private cdnUrl:  string;
   private enabled: boolean;
 
@@ -21,6 +22,7 @@ export class StorageService {
     const accessKey = config.get<string>('AWS_ACCESS_KEY_ID')   ?? '';
     const secretKey = config.get<string>('AWS_SECRET_ACCESS_KEY') ?? '';
     this.bucket     = config.get<string>('AWS_S3_BUCKET')       ?? '';
+    this.region     = region;
     this.cdnUrl     = config.get<string>('CLOUDFRONT_URL')      ?? '';
     this.enabled    = !!(region && accessKey && secretKey && this.bucket);
 
@@ -42,11 +44,11 @@ export class StorageService {
     contentType: string,
     expiresInSeconds = 3600,
   ) {
-    if (!this.enabled) return { uploadUrl: '', key: '' };
+    if (!this.enabled) return { uploadUrl: '', key: '', publicUrl: '' };
     const key = `${folder}/${uuid()}-${fileName}`;
     const command = new PutObjectCommand({ Bucket: this.bucket, Key: key, ContentType: contentType });
     const uploadUrl = await getSignedUrl(this.s3, command, { expiresIn: expiresInSeconds });
-    return { uploadUrl, key };
+    return { uploadUrl, key, publicUrl: this.getPublicUrl(key) };
   }
 
   async getViewUrl(key: string, expiresInSeconds = 3600): Promise<string> {
@@ -58,8 +60,15 @@ export class StorageService {
   }
 
   getPublicUrl(key: string): string {
-    if (!this.cdnUrl || !key) return '';
-    return `${this.cdnUrl}/${key}`;
+    if (!key) return '';
+    if (/^https?:\/\//i.test(key)) return key; // already a full URL (e.g. manually pasted)
+    if (this.cdnUrl) return `${this.cdnUrl}/${key}`;
+    // No CDN configured yet — fall back to a direct S3 URL so images still
+    // work. Requires the bucket to allow public GetObject for these prefixes
+    // (thumbnails/blog-covers/career-path-icons); private content (videos,
+    // certificates) should keep using getViewUrl's signed URLs instead.
+    if (this.enabled) return `https://${this.bucket}.s3.${this.region}.amazonaws.com/${key}`;
+    return '';
   }
 
   async uploadBuffer(key: string, buffer: Buffer, contentType: string): Promise<string> {

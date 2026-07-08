@@ -1,10 +1,16 @@
 // C:\Users\LENOVO\Downloads\laximotech(project)\laximotech7\apps\api\src\quizzes\quizzes.service.ts
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { CertificatesService } from '../certificates/certificates.service';
+import { ProgressService } from '../progress/progress.service';
 
 @Injectable()
 export class QuizzesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private certificates: CertificatesService,
+    private progress: ProgressService,
+  ) {}
 
   // Get quiz questions — correct answer NOT sent to client
   async getQuiz(quizId: string, userId: string) {
@@ -123,15 +129,27 @@ export class QuizzesService {
       });
     }
 
-    // If final exam passed → auto-generate certificate
+    const courseId = quiz.lesson.section.course.id;
+
+    // A quiz lives on its own lesson (contentType QUIZ) — passing it needs to
+    // mark THAT lesson complete too, exactly like watching a video does.
+    // Without this, quiz-lessons could never show a checkmark and overall
+    // course completion could never reach 100% even after finishing every
+    // other lesson (previously stalled around 75% on a typical 4-quiz course).
+    if (passed) {
+      await this.prisma.lessonProgress.upsert({
+        where:  { userId_lessonId: { userId, lessonId: quiz.lessonId } },
+        create: { userId, lessonId: quiz.lessonId, isCompleted: true, watchedSeconds: 0, completedAt: new Date() },
+        update: { isCompleted: true, completedAt: new Date() },
+      });
+      await this.progress.recalcEnrollmentProgress(userId, courseId);
+    }
+
+    // If final exam passed → auto-issue certificate (this also kicks off real PDF generation,
+    // instead of just creating a bare DB row with no downloadable file).
     let certificate = null;
     if (quiz.isFinalExam && passed) {
-      const courseId = quiz.lesson.section.course.id;
-      certificate = await this.prisma.certificate.upsert({
-        where:  { userId_courseId: { userId, courseId } },
-        update: { finalScore: score },
-        create: { userId, courseId, finalScore: score },
-      });
+      certificate = await this.certificates.issueCertificate(userId, courseId, score);
     }
 
     return {

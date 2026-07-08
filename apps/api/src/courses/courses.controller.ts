@@ -90,16 +90,20 @@ export class CoursesController {
   @Roles(Role.ADMIN, Role.INSTRUCTOR)
   @Post()
   create(@CurrentUser() user: any, @Body() body: any) {
-    // instructorId always derives from the logged-in admin/instructor —
-    // never trusted from the request body.
-    return this.courses.create({ ...body, instructorId: user.id });
+    // Instructors can only ever create courses under their own name — this
+    // prevents impersonation. Admins may assign any real instructor from
+    // the instructor roster (never trusted blindly — validated in the service).
+    const instructorId = user.role === 'ADMIN' && body.instructorId ? body.instructorId : user.id;
+    return this.courses.create({ ...body, instructorId });
   }
 
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN, Role.INSTRUCTOR)
   @Patch(':id')
-  update(@Param('id') id: string, @Body() body: any) {
-    return this.courses.update(id, body);
+  update(@CurrentUser() user: any, @Param('id') id: string, @Body() body: any) {
+    // Only admins may reassign a course's instructor.
+    const payload = user.role === 'ADMIN' ? body : { ...body, instructorId: undefined };
+    return this.courses.update(id, payload);
   }
 }

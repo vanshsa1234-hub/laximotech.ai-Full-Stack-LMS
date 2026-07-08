@@ -8,13 +8,14 @@ export class AdminService {
   async getDashboardStats() {
     const [
       totalStudents, totalCourses, totalEnrollments,
-      totalRevenue, totalCertificates, recentOrders,
+      totalRevenue, totalCertificates, pendingDemoRequests, recentOrders,
     ] = await Promise.all([
       this.prisma.user.count({ where: { role: 'STUDENT' } }),
       this.prisma.course.count({ where: { isPublished: true } }),
       this.prisma.enrollment.count(),
       this.prisma.order.aggregate({ where: { status: 'PAID' }, _sum: { amount: true } }),
       this.prisma.certificate.count({ where: { status: 'ISSUED' } }),
+      this.prisma.demoRequest.count({ where: { status: 'PENDING' } }),
       this.prisma.order.findMany({
         where:   { status: 'PAID' },
         orderBy: { createdAt: 'desc' },
@@ -49,6 +50,7 @@ export class AdminService {
       totalRevenuePaise: totalRevenue._sum.amount ?? 0,
       totalRevenueRs:    Math.round((totalRevenue._sum.amount ?? 0) / 100),
       totalCertificates,
+      pendingDemoRequests,
       recentOrders,
       dailyRevenue,
     };
@@ -135,8 +137,9 @@ export class AdminService {
   async getEnrollmentsByStudent(userId: string) {
     return this.prisma.enrollment.findMany({
       where:   { userId },
+      orderBy: { enrolledAt: 'desc' },
       include: {
-        course: { select: { id: true, title: true, slug: true } },
+        course: { select: { id: true, title: true, slug: true, thumbnailUrl: true, category: true } },
       },
     });
   }

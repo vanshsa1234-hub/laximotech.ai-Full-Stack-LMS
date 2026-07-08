@@ -1,16 +1,17 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useInView } from 'react-intersection-observer';
 import { Shield, Zap, HeadphonesIcon, RefreshCw } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { usePlatformStats } from '@/hooks/use-queries';
 
 function Counter({ to, suffix = '' }: { to: number; suffix?: string }) {
   const [count, setCount] = useState(0);
   const { ref, inView } = useInView({ triggerOnce: true });
 
   useEffect(() => {
-    if (!inView) return;
+    if (!inView || !to) return;
     let start = 0;
     const step = to / 60;
     const timer = setInterval(() => {
@@ -24,35 +25,39 @@ function Counter({ to, suffix = '' }: { to: number; suffix?: string }) {
   return <span ref={ref}>{count.toLocaleString('en-IN')}{suffix}</span>;
 }
 
-const stats = [
-  { value: 10000, suffix: '+', label: 'Students Enrolled' },
-  { value: 25,    suffix: '+', label: 'Expert Courses' },
-  { value: 399,   suffix: '',  label: 'Price Per Course (Rs)' },
-  { value: 98,    suffix: '%', label: 'Completion Rate' },
-];
-
 const trust = [
   { icon: Shield,         text: 'Secure Payments',      sub: 'Razorpay UPI/Cards' },
   { icon: Zap,            text: 'Instant Access',        sub: 'Start in 60 seconds' },
-  { icon: RefreshCw,      text: '30-Day Refund',         sub: 'No questions asked' },
+  { icon: RefreshCw,      text: 'Lifetime Access',       sub: 'Learn at your own pace' },
   { icon: HeadphonesIcon, text: '24/7 Support',          sub: 'Hindi & English' },
 ];
 
 export function TrustBar() {
+  const { data: platformStats, isLoading } = usePlatformStats();
+  const s = platformStats as any;
+
+  // All real, computed from the database — no placeholder numbers while loading.
+  const stats = [
+    { value: s?.totalStudents ?? 0,  suffix: '+', label: 'Students Enrolled' },
+    { value: s?.totalCourses  ?? 0,  suffix: '+', label: 'Expert Courses' },
+    { value: s?.avgRating ? Math.round(s.avgRating * 10) / 10 : null, suffix: '/5', label: 'Avg. Course Rating' },
+    { value: s?.completionRate ?? null, suffix: '%', label: 'Completion Rate' },
+  ];
+
   return (
     <section className="bg-white border-y border-gray-100">
       {/* Stats row */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-          {stats.map((s, i) => (
+          {stats.map((st, i) => (
             <motion.div key={i}
               initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }} transition={{ delay: i * 0.1 }}
               className="text-center">
               <div className="font-heading font-bold text-brand-blue text-3xl md:text-4xl mb-1">
-                <Counter to={s.value} suffix={s.suffix} />
+                {isLoading ? '—' : st.value != null ? <Counter to={st.value} suffix={st.suffix} /> : 'New'}
               </div>
-              <div className="text-gray-500 text-sm">{s.label}</div>
+              <div className="text-gray-500 text-sm">{st.label}</div>
             </motion.div>
           ))}
         </div>

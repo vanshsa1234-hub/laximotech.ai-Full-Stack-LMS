@@ -124,12 +124,16 @@ export function CourseCard({ course, index = 0 }: CourseCardProps) {
 
             {/* Rating + CTA */}
             <div className="flex items-center justify-between pt-3 border-t border-gray-50">
-              <div className="flex items-center gap-1">
-                {[1,2,3,4,5].map(s => (
-                  <Star key={s} size={12} className={(course.avgRating ?? 4.8) >= s ? 'fill-yellow-400 text-yellow-400' : 'fill-gray-200 text-gray-200'} />
-                ))}
-                <span className="text-xs text-gray-500 ml-1">{(course.avgRating ?? 4.8).toFixed(1)}</span>
-              </div>
+              {course.avgRating != null && (course._count?.reviews ?? 0) > 0 ? (
+                <div className="flex items-center gap-1">
+                  {[1,2,3,4,5].map(s => (
+                    <Star key={s} size={12} className={course.avgRating! >= s ? 'fill-yellow-400 text-yellow-400' : 'fill-gray-200 text-gray-200'} />
+                  ))}
+                  <span className="text-xs text-gray-500 ml-1">{course.avgRating!.toFixed(1)} ({course._count?.reviews})</span>
+                </div>
+              ) : (
+                <span className="text-xs text-gray-400">No ratings yet</span>
+              )}
               <span className="text-brand-blue text-xs font-semibold group-hover:text-brand-orange transition-colors">
                 View Course →
               </span>

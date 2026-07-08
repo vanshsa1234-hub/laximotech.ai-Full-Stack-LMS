@@ -4,9 +4,12 @@
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, BookOpen, Check, FileQuestion, Loader2, Plus, Save, Video } from 'lucide-react';
+import { ArrowLeft, BookOpen, Check, FileQuestion, Loader2, Plus, Save, Video, User, Mail } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { coursesApi } from '@/lib/api';
+import { useAdminInstructors } from '@/hooks/use-queries';
+import { ImageUpload } from '@/components/admin/image-upload';
+import { VideoUpload } from '@/components/admin/video-upload';
 
 const CONTENT_TYPES = ['VIDEO', 'PDF', 'QUIZ', 'CODE', 'TEXT'];
 
@@ -64,6 +67,38 @@ export default function CourseBuilderPage({ params }: { params: { id: string } }
     queryKey: ['course-builder', params.id],
     queryFn: () => coursesApi.builder(params.id).then(r => r.data),
   });
+
+  const { data: instructors } = useAdminInstructors();
+  const instructorList = (instructors as any[]) ?? [];
+  const [savingInstructor, setSavingInstructor] = useState(false);
+  const [savingThumbnail, setSavingThumbnail] = useState(false);
+
+  const saveThumbnail = async (url: string) => {
+    setSavingThumbnail(true);
+    try {
+      await coursesApi.update(params.id, { thumbnailUrl: url });
+      toast.success(url ? 'Thumbnail updated!' : 'Thumbnail removed.');
+      refresh();
+    } catch {
+      toast.error('Failed to update thumbnail.');
+    } finally {
+      setSavingThumbnail(false);
+    }
+  };
+
+  const changeInstructor = async (instructorId: string) => {
+    if (!instructorId) return;
+    setSavingInstructor(true);
+    try {
+      await coursesApi.update(params.id, { instructorId });
+      toast.success('Instructor updated!');
+      refresh();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message ?? 'Failed to update instructor.');
+    } finally {
+      setSavingInstructor(false);
+    }
+  };
 
   const selectedLesson = useMemo(() => {
     if (!lessonForm.id || !course) return null;
@@ -225,6 +260,48 @@ export default function CourseBuilderPage({ params }: { params: { id: string } }
         </Link>
       </div>
 
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6">
+        {/* Thumbnail — real image shown on the public course card */}
+        <div className="bg-gray-900 border border-gray-800 rounded-2xl p-4">
+          <ImageUpload
+            label="Course Thumbnail"
+            value={course?.thumbnailUrl ?? ''}
+            onChange={saveThumbnail}
+            aspectClassName="aspect-video"
+            helpText={savingThumbnail ? 'Saving...' : 'Shown on the course card everywhere on the site.'}
+          />
+        </div>
+
+        {/* Instructor — real profile, reassignable to any real instructor on the roster */}
+        <div className="bg-gray-900 border border-gray-800 rounded-2xl p-4 flex items-center gap-4 flex-wrap h-fit">
+          <div className="w-11 h-11 rounded-full bg-brand-orange/10 flex items-center justify-center flex-shrink-0 overflow-hidden">
+            {course?.instructor?.image ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={course.instructor.image} alt={course.instructor.name} className="w-full h-full object-cover" />
+            ) : (
+              <User size={18} className="text-brand-orange" />
+            )}
+          </div>
+          <div className="min-w-0">
+            <div className="text-white text-sm font-semibold">{course?.instructor?.name ?? 'No instructor assigned'}</div>
+            <div className="text-gray-500 text-xs flex items-center gap-1">
+              {course?.instructor?.email && <><Mail size={10} /> {course.instructor.email}</>}
+            </div>
+          </div>
+          <div className="ml-auto flex items-center gap-2">
+            <select value={course?.instructorId ?? ''} onChange={e => changeInstructor(e.target.value)}
+              disabled={savingInstructor}
+              className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-brand-orange cursor-pointer">
+              <option value="" disabled>Reassign instructor...</option>
+              {instructorList.map(ins => (
+                <option key={ins.id} value={ins.id}>{ins.name} ({ins.role})</option>
+              ))}
+            </select>
+            {savingInstructor && <Loader2 size={14} className="animate-spin text-gray-400" />}
+          </div>
+        </div>
+      </div>
+
       <div className="grid grid-cols-12 gap-5">
         <div className="col-span-12 lg:col-span-5 space-y-4">
           <div className="bg-gray-900 border border-gray-800 rounded-2xl p-4">
@@ -317,10 +394,13 @@ export default function CourseBuilderPage({ params }: { params: { id: string } }
             </div>
 
             <div className="mt-4 space-y-4">
-              <Field label="Video URL or S3 key">
-                <input value={lessonForm.videoUrl} onChange={e => setLessonForm((p: any) => ({ ...p, videoUrl: e.target.value }))}
-                  className="admin-input" placeholder="https://...mp4 or videos/file.mp4" />
-              </Field>
+              <VideoUpload
+                label="Lesson Video"
+                value={lessonForm.videoUrl}
+                onChange={url => setLessonForm((p: any) => ({ ...p, videoUrl: url }))}
+                onDurationDetected={seconds => setLessonForm((p: any) => ({ ...p, videoDurationSec: seconds }))}
+                helpText="Students need a real playable video here for lesson completion + XP to trigger."
+              />
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Field label="Hindi Subtitle URL or key">
                   <input value={lessonForm.subtitleHiUrl} onChange={e => setLessonForm((p: any) => ({ ...p, subtitleHiUrl: e.target.value }))}

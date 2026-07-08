@@ -5,19 +5,32 @@ import { Navbar } from '@/components/layout/navbar';
 import { Footer } from '@/components/layout/footer';
 import { Mail, Phone, MapPin, Send, Loader2, CheckCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useSiteContent, useCreateContactMessage } from '@/hooks/use-queries';
 
 export default function ContactPage() {
-  const [form,    setForm]    = useState({ name: '', email: '', subject: '', message: '' });
-  const [loading, setLoading] = useState(false);
-  const [sent,    setSent]    = useState(false);
+  const { data: res } = useSiteContent('contact');
+  const info = (res as any)?.data;
+  const createMessage = useCreateContactMessage();
+
+  const [form,  setForm]  = useState({ name: '', email: '', subject: '', message: '' });
+  const [sent,  setSent]  = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    await new Promise(r => setTimeout(r, 1000));
-    setLoading(false); setSent(true);
-    toast.success('Message sent! We\'ll reply within 24 hours.');
+    try {
+      await createMessage.mutateAsync(form);
+      setSent(true);
+      toast.success('Message sent! We\'ll reply within 24 hours.');
+    } catch (err) {
+      toast.error('Something went wrong. Please try again.');
+    }
   };
+
+  const contactItems = info ? [
+    { icon: Mail,   title: 'Email',    value: info.email,    href: `mailto:${info.email}` },
+    { icon: Phone,  title: 'Phone',    value: info.phone,    href: `tel:${info.phone.replace(/\s/g, '')}` },
+    { icon: MapPin, title: 'Location', value: info.location, href: null },
+  ] : [];
 
   return (
     <>
@@ -33,11 +46,7 @@ export default function ContactPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Contact info */}
             <div className="space-y-4">
-              {[
-                { icon: Mail,   title: 'Email',    value: 'hello@laximotech.ai', href: 'mailto:hello@laximotech.ai' },
-                { icon: Phone,  title: 'Phone',    value: '+91 99990 00000',     href: 'tel:+919999000000' },
-                { icon: MapPin, title: 'Location', value: 'Greater Noida West, UP, India', href: null },
-              ].map((item, i) => (
+              {contactItems.map((item, i) => (
                 <motion.div key={i} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.1 }}
                   className="bg-white rounded-2xl p-5 shadow-card border border-gray-100">
                   <div className="flex items-start gap-4">
@@ -56,10 +65,12 @@ export default function ContactPage() {
                 </motion.div>
               ))}
 
-              <div className="bg-brand-blue/5 border border-brand-blue/20 rounded-2xl p-5">
-                <div className="font-semibold text-brand-blue text-sm mb-1">Response Time</div>
-                <div className="text-gray-500 text-sm">We reply within 24 hours — usually much faster!</div>
-              </div>
+              {info && (
+                <div className="bg-brand-blue/5 border border-brand-blue/20 rounded-2xl p-5">
+                  <div className="font-semibold text-brand-blue text-sm mb-1">Response Time</div>
+                  <div className="text-gray-500 text-sm">{info.responseTime}</div>
+                </div>
+              )}
             </div>
 
             {/* Form */}
@@ -90,7 +101,6 @@ export default function ContactPage() {
                       <option>Course inquiry</option>
                       <option>Technical support</option>
                       <option>Corporate / B2B</option>
-                      <option>Refund request</option>
                       <option>Partnership</option>
                       <option>Other</option>
                     </select>
@@ -101,9 +111,9 @@ export default function ContactPage() {
                       className="input resize-none" placeholder="Apna sawaal ya feedback likhein..." />
                   </div>
                   <motion.button type="submit" whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}
-                    disabled={loading}
+                    disabled={createMessage.isPending}
                     className="w-full btn-primary justify-center py-4 disabled:opacity-60">
-                    {loading ? <><Loader2 size={16} className="animate-spin" /> Sending...</> : <><Send size={16} /> Send Message</>}
+                    {createMessage.isPending ? <><Loader2 size={16} className="animate-spin" /> Sending...</> : <><Send size={16} /> Send Message</>}
                   </motion.button>
                 </form>
               )}

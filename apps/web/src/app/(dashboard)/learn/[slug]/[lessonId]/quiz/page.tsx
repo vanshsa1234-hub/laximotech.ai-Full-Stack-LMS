@@ -9,6 +9,7 @@ import {
   ArrowLeft, AlertCircle, Zap, RotateCcw, Home, Loader2
 } from 'lucide-react';
 import { useSession } from 'next-auth/react';
+import { useQueryClient } from '@tanstack/react-query';
 import { quizzesApi, lessonsApi } from '@/lib/api';
 import toast from 'react-hot-toast';
 
@@ -16,6 +17,7 @@ type QuizState = 'loading' | 'no-quiz' | 'intro' | 'taking' | 'submitting' | 're
 
 export default function QuizPage({ params }: { params: { slug: string; lessonId: string } }) {
   const { data: session } = useSession();
+  const queryClient = useQueryClient();
   const [state,    setState]    = useState<QuizState>('loading');
   const [quiz,     setQuiz]     = useState<any>(null);
   const [answers,  setAnswers]  = useState<Record<number, number>>({});
@@ -79,6 +81,16 @@ export default function QuizPage({ params }: { params: { slug: string; lessonId:
       const res = await quizzesApi.submit(quiz.id, { answers: answersArr, timeTakenSec });
       setResults(res.data);
       setState('results');
+      if (res.data?.passed) {
+        // Same gap the video player had: without this, the quiz lesson's
+        // checkmark and overall course % stayed stale until a hard reload.
+        queryClient.invalidateQueries({ queryKey: ['enrollments'] });
+        queryClient.invalidateQueries({ queryKey: ['user-stats'] });
+        queryClient.invalidateQueries({ queryKey: ['activity-heatmap'] });
+        queryClient.invalidateQueries({ queryKey: ['my-profile'] });
+        queryClient.invalidateQueries({ queryKey: ['certificates'] });
+        lessonsApi.forCourse(params.slug).catch(() => {}); // warms cache; sidebar refetches on next visit
+      }
     } catch (err: any) {
       toast.error(err?.response?.data?.message ?? 'Failed to submit quiz');
       setState('taking');

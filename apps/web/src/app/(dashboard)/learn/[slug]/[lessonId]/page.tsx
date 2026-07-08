@@ -14,10 +14,12 @@ import {
 import { AiStudyBuddy } from '@/components/ai/study-buddy';
 import { DiscussionSection } from '@/components/community/discussion-section';
 import { progressApi, lessonsApi } from '@/lib/api';
+import { useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 
 export default function LearnPage({ params }: { params: { slug: string; lessonId: string } }) {
   const { data: session, status: sessionStatus } = useSession();
+  const queryClient = useQueryClient();
   const videoRef = useRef<HTMLVideoElement>(null);
   const controlsTimer = useRef<ReturnType<typeof setTimeout>>();
   const progressTimer = useRef<ReturnType<typeof setInterval>>();
@@ -71,27 +73,48 @@ export default function LearnPage({ params }: { params: { slug: string; lessonId
     controlsTimer.current = setTimeout(() => { if (playing) setShowControls(false); }, 3000);
   };
 
-  // Save real progress every 30s while playing
+  // Shared by both save paths below — whichever one the backend actually
+  // confirms completion on, the UI needs to react the same way.
+  const markedComplete = useRef(false);
+  const handleProgressResponse = (res: any) => {
+    if (res.data?.isCompleted && !markedComplete.current) {
+      markedComplete.current = true;
+      toast.success('Lesson completed! +10 XP', { icon: '🎉' });
+      // Without this, /dashboard/my-courses, /dashboard/progress, and the
+      // profile card kept showing stale cached progress until a hard reload.
+      queryClient.invalidateQueries({ queryKey: ['enrollments'] });
+      queryClient.invalidateQueries({ queryKey: ['user-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['activity-heatmap'] });
+      queryClient.invalidateQueries({ queryKey: ['my-profile'] });
+      // The sidebar checkmark list is plain local state (not react-query),
+      // so refetch it directly too — otherwise it only updates after
+      // navigating to a different lesson.
+      lessonsApi.forCourse(params.slug).then(res => setCurriculum(res.data)).catch(() => {});
+    }
+  };
+
+  // Save real progress every 30s while playing — this can be the FIRST call
+  // to actually cross the completion threshold server-side (e.g. if the
+  // lesson has no recorded duration yet), so it must handle the response
+  // too, not just the dedicated 80% check below.
   useEffect(() => {
     if (!session || !playing) return;
     progressTimer.current = setInterval(() => {
       if (videoRef.current && currentTime > 0) {
-        progressApi.update(params.lessonId, Math.floor(currentTime)).catch(() => {});
+        progressApi.update(params.lessonId, Math.floor(currentTime)).then(handleProgressResponse).catch(() => {});
       }
     }, 30000);
     return () => clearInterval(progressTimer.current);
   }, [session, playing, currentTime, params.lessonId]);
 
-  // Mark complete at 80% watched — fires the real backend XP/streak logic
-  const markedComplete = useRef(false);
+  // Mark complete at 80% watched (client-side estimate) — usually redundant
+  // with the autosave above by the time this fires, kept as a second path
+  // in case the interval hasn't ticked yet.
   useEffect(() => {
     if (duration > 0 && currentTime / duration >= 0.8 && !markedComplete.current) {
-      markedComplete.current = true;
-      progressApi.update(params.lessonId, Math.floor(currentTime)).then(() => {
-        toast.success('Lesson completed! +10 XP', { icon: '🎉' });
-      }).catch(() => {});
+      progressApi.update(params.lessonId, Math.floor(currentTime)).then(handleProgressResponse).catch(() => {});
     }
-  }, [currentTime, duration, params.lessonId]);
+  }, [currentTime, duration, params.lessonId, queryClient]);
 
   const togglePlay = () => {
     if (!videoRef.current || !lesson?.videoUrl || videoError) return;

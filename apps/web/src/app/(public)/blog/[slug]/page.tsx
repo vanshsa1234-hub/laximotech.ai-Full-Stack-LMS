@@ -2,15 +2,17 @@
 
 import { motion } from 'framer-motion';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Navbar } from '@/components/layout/navbar';
 import { Footer } from '@/components/layout/footer';
 import { ArrowLeft, Clock, Share2, Twitter, Linkedin } from 'lucide-react';
-import { useBlogPost } from '@/hooks/use-queries';
+import { useBlogPost, usePlatformStats } from '@/hooks/use-queries';
 import { formatDate } from '@/lib/utils';
 import toast from 'react-hot-toast';
 
 export default function BlogPostPage({ params }: { params: { slug: string } }) {
   const { data: post, isLoading } = useBlogPost(params.slug);
+  const { data: stats } = usePlatformStats();
   const shareUrl = typeof window !== 'undefined' ? window.location.href : `https://laximotech.ai/blog/${params.slug}`;
 
   if (isLoading) {
@@ -68,6 +70,12 @@ export default function BlogPostPage({ params }: { params: { slug: string } }) {
             <h1 className="font-heading font-bold text-gray-900 text-3xl md:text-4xl leading-tight mb-5">{(post as any).title}</h1>
             <p className="text-gray-600 text-lg leading-relaxed mb-6">{(post as any).excerpt}</p>
 
+            {(post as any).coverImage && (
+              <div className="relative w-full h-72 md:h-96 rounded-2xl overflow-hidden mb-8">
+                <Image src={(post as any).coverImage} alt={(post as any).title} fill className="object-cover" priority />
+              </div>
+            )}
+
             {/* Author + Share */}
             <div className="flex items-center justify-between py-4 border-y border-gray-100 mb-8">
               <div className="flex items-center gap-3">
@@ -108,7 +116,9 @@ export default function BlogPostPage({ params }: { params: { slug: string } }) {
             className="mt-12 bg-gradient-to-br from-brand-blue to-brand-blue-dark rounded-2xl p-8 text-white text-center">
             <div className="text-2xl mb-3">🚀</div>
             <h3 className="font-heading font-bold text-xl mb-2">Tech career shuru karna chahte ho?</h3>
-            <p className="text-white/70 text-sm mb-5">25+ courses sirf Rs 399 mein. Certificate, projects, lifetime access — sab included.</p>
+            <p className="text-white/70 text-sm mb-5">
+              {(stats as any)?.totalCourses > 0 ? `${(stats as any).totalCourses}+ courses` : 'Courses'} sirf Rs 399 mein. Certificate, projects, lifetime access — sab included.
+            </p>
             <Link href="/courses" className="inline-flex items-center gap-2 bg-brand-orange text-white font-bold px-6 py-3 rounded-full hover:bg-brand-orange-light transition-all shadow-orange">
               Browse Courses →
             </Link>

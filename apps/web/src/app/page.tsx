@@ -12,6 +12,7 @@ import { FaqSection }         from '@/components/home/faq-section';
 import { CtaBanner }          from '@/components/home/cta-banner';
 import { Navbar }             from '@/components/layout/navbar';
 import { Footer }             from '@/components/layout/footer';
+import { AiStudyBuddy }       from '@/components/ai/study-buddy';
 
 export default function HomePage() {
   return (
@@ -32,6 +33,8 @@ export default function HomePage() {
         <CtaBanner />
       </main>
       <Footer />
+      {/* Real, functional AI assistant — usable without logging in */}
+      <AiStudyBuddy />
     </>
   );
 }

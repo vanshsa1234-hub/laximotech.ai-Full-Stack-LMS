@@ -51,6 +51,19 @@ enum ContentType {
   TEXT
 }
 
+enum DemoRequestStatus {
+  PENDING
+  CONTACTED
+  COMPLETED
+  CANCELLED
+}
+
+enum ContactMessageStatus {
+  NEW
+  READ
+  RESPONDED
+}
+
 enum CertificateStatus {
   ISSUED
   REVOKED
@@ -86,6 +99,7 @@ model User {
   phone         String?
   city          String?
   linkedinUrl   String?
+  preferences   Json?     // { notifications: {email,streak,weekly}, language: 'hi'|'en' }
 
   // relations
   accounts      Account[]
@@ -97,6 +111,7 @@ model User {
   progress      LessonProgress[]
   comments      Comment[]
   commentVotes  CommentVote[]
+  reviews       Review[]
   coursesCrated Course[]         @relation("InstructorCourses")
   blogPosts     BlogPost[]
   weeklyGoals   WeeklyGoal[]
@@ -388,6 +403,7 @@ model Review {
   createdAt DateTime @default(now())
 
   course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, courseId])
   @@map("reviews")
@@ -603,4 +619,47 @@ model SavedCode {
   lesson Lesson? @relation(fields: [lessonId], references: [id], onDelete: SetNull)
 
   @@map("saved_code")
+}
+
+// ============================================================
+// DEMO CLASS REQUESTS
+// ============================================================
+
+model DemoRequest {
+  id        String            @id @default(cuid())
+  name      String
+  phone     String
+  email     String
+  topic     String
+  slot      String
+  mode      String            // "online" | "offline"
+  status    DemoRequestStatus @default(PENDING)
+  createdAt DateTime          @default(now())
+
+  @@map("demo_requests")
+}
+
+model ContactMessage {
+  id        String                @id @default(cuid())
+  name      String
+  email     String
+  subject   String
+  message   String                @db.Text
+  status    ContactMessageStatus  @default(NEW)
+  createdAt DateTime              @default(now())
+
+  @@map("contact_messages")
+}
+
+// ============================================================
+// EDITABLE SITE CONTENT (About / Contact / Privacy / Terms / Career Quiz)
+// ============================================================
+
+model SiteContent {
+  id        String   @id @default(cuid())
+  key       String   @unique   // "about" | "contact" | "privacy" | "terms" | "career-quiz"
+  data      Json
+  updatedAt DateTime @updatedAt
+
+  @@map("site_content")
 }

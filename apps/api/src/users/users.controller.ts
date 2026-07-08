@@ -26,6 +26,13 @@ export class UsersController {
 
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
+  @Get('me/activity')
+  getActivity(@CurrentUser() user: any) {
+    return this.users.getActivityHeatmap(user.id);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
   @Patch('me')
   updateProfile(@CurrentUser() user: any, @Body() body: any) {
     return this.users.updateProfile(user.id, body);

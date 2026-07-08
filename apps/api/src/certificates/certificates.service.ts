@@ -11,13 +11,21 @@ export class CertificatesService {
   ) {}
 
   async getMyCertificates(userId: string) {
-    return this.prisma.certificate.findMany({
+    const certs = await this.prisma.certificate.findMany({
       where:   { userId, status: 'ISSUED' },
       orderBy: { issuedAt: 'desc' },
       include: {
         course: { select: { id: true, slug: true, title: true, category: true } },
       },
     });
+
+    // pdfUrl/imageUrl are stored as raw S3 keys — resolve them to real,
+    // clickable URLs here rather than leaving that to the frontend.
+    return Promise.all(certs.map(async c => ({
+      ...c,
+      pdfUrl:   c.pdfUrl ? await this.storage.getViewUrl(c.pdfUrl, 3600) : null,
+      imageUrl: c.imageUrl ? this.storage.getPublicUrl(c.imageUrl) : null,
+    })));
   }
 
   async verifyCertificate(certificateNo: string) {
@@ -55,13 +63,23 @@ export class CertificatesService {
     });
     if (!cert) throw new NotFoundException('Certificate not found.');
 
-    const html = this.buildCertificateHtml({
+    const customTemplate = await this.prisma.siteContent.findUnique({ where: { key: 'certificate-template' } });
+    const templateData = customTemplate?.data as any;
+
+    const certData = {
       holderName:     cert.user.name ?? 'Student',
       courseTitle:    cert.course.title,
       certificateNo:  cert.certificateNo,
       issuedAt:       cert.issuedAt.toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }),
       finalScore:     cert.finalScore ?? 0,
-    });
+    };
+
+    // Use the admin's custom background + field layout if one has been
+    // configured in /admin/certificate-template; otherwise fall back to the
+    // built-in design so nothing breaks for admins who never touch that page.
+    const html = templateData?.backgroundImageUrl
+      ? this.buildCustomCertificateHtml(templateData, certData)
+      : this.buildCertificateHtml(certData);
 
     let browser: puppeteer.Browser | null = null;
     try {
@@ -122,6 +140,46 @@ export class CertificatesService {
       where: { certificateNo },
       data:  { status: 'REVOKED' },
     });
+  }
+
+  // Admin-configured design: a background image with each dynamic field
+  // (name, course, score, date, cert number) positioned by percentage so it
+  // scales correctly regardless of the uploaded image's native resolution.
+  private buildCustomCertificateHtml(
+    template: { backgroundImageUrl: string; fields: Record<string, any> },
+    data: { holderName: string; courseTitle: string; certificateNo: string; issuedAt: string; finalScore: number },
+  ): string {
+    const values: Record<string, string> = {
+      holderName:    data.holderName,
+      courseTitle:   data.courseTitle,
+      finalScore:    `${data.finalScore}%`,
+      issuedAt:      data.issuedAt,
+      certificateNo: data.certificateNo,
+    };
+
+    const overlays = Object.entries(template.fields)
+      .filter(([, f]: [string, any]) => f.show !== false)
+      .map(([key, f]: [string, any]) => `
+        <div style="
+          position:absolute; left:${f.x}%; top:${f.y}%;
+          transform:translate(${f.textAlign === 'left' ? '0' : f.textAlign === 'right' ? '-100%' : '-50%'}, -50%);
+          font-size:${f.fontSize}px; color:${f.color}; font-weight:${f.fontWeight};
+          font-family:${f.fontFamily}; text-align:${f.textAlign}; white-space:nowrap;
+        ">${values[key] ?? ''}</div>`).join('');
+
+    return `
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8" />
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { width:297mm; height:210mm; overflow:hidden; }
+  .cert { position:relative; width:297mm; height:210mm;
+    background:url('${template.backgroundImageUrl}') center/cover no-repeat; }
+</style>
+</head>
+<body><div class="cert">${overlays}</div></body>
+</html>`;
   }
 
   private buildCertificateHtml(data: {

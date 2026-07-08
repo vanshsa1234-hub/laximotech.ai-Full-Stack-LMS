@@ -1,7 +1,8 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Users, BookOpen, Award, TrendingUp, ArrowUpRight, IndianRupee, Loader2 } from 'lucide-react';
+import { Users, BookOpen, Award, TrendingUp, ArrowUpRight, IndianRupee, Loader2, CalendarCheck } from 'lucide-react';
+import Link from 'next/link';
 import { useAdminStats } from '@/hooks/use-queries';
 import { timeAgo } from '@/lib/utils';
 
@@ -14,6 +15,7 @@ export default function AdminDashboard() {
     { label: 'Total Revenue',     value: `Rs ${(((s?.totalRevenueRs ?? 0))/100000).toFixed(2)}L`, icon: IndianRupee, color: 'bg-green-500/10  text-green-400' },
     { label: 'Courses Published', value: s?.totalCourses ?? 0,      icon: BookOpen,     color: 'bg-purple-500/10 text-purple-400' },
     { label: 'Certificates',      value: s?.totalCertificates?.toLocaleString('en-IN') ?? '0', icon: Award, color: 'bg-orange-500/10 text-orange-400' },
+    { label: 'Pending Demo Requests', value: s?.pendingDemoRequests ?? 0, icon: CalendarCheck, color: 'bg-pink-500/10 text-pink-400', href: '/admin/demo-requests' },
   ];
 
   return (
@@ -30,17 +32,24 @@ export default function AdminDashboard() {
       ) : (
         <>
           {/* Stats */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-            {STATS.map((stat, i) => (
-              <motion.div key={i} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }}
-                className="bg-gray-900 rounded-2xl p-5 border border-gray-800">
-                <div className={`w-10 h-10 rounded-xl ${stat.color.split(' ')[0]} flex items-center justify-center mb-4`}>
-                  <stat.icon size={18} className={stat.color.split(' ')[1]} />
-                </div>
-                <div className="font-heading font-bold text-white text-2xl mb-1">{stat.value}</div>
-                <div className="text-gray-500 text-xs">{stat.label}</div>
-              </motion.div>
-            ))}
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+            {STATS.map((stat, i) => {
+              const Card = (
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }}
+                  className="bg-gray-900 rounded-2xl p-5 border border-gray-800 hover:border-gray-700 transition-colors h-full">
+                  <div className={`w-10 h-10 rounded-xl ${stat.color.split(' ')[0]} flex items-center justify-center mb-4`}>
+                    <stat.icon size={18} className={stat.color.split(' ')[1]} />
+                  </div>
+                  <div className="font-heading font-bold text-white text-2xl mb-1">{stat.value}</div>
+                  <div className="text-gray-500 text-xs">{stat.label}</div>
+                </motion.div>
+              );
+              return (stat as any).href ? (
+                <Link key={i} href={(stat as any).href}>{Card}</Link>
+              ) : (
+                <div key={i}>{Card}</div>
+              );
+            })}
           </div>
 
           {/* Recent orders — real data */}

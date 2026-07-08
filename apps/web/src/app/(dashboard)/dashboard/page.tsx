@@ -3,14 +3,14 @@
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
-import { Navbar } from '@/components/layout/navbar';
-import { useUserStats, useMyEnrollments } from '@/hooks/use-queries';
+import { useUserStats, useMyEnrollments, usePlatformStats } from '@/hooks/use-queries';
 import { DashboardStatsSkeleton } from '@/components/common/skeletons';
 import { xpToLevel, formatDate } from '@/lib/utils';
 import { Play, Award, Flame, Star, TrendingUp, BookOpen, Clock, ChevronRight, Zap } from 'lucide-react';
 
 export default function DashboardPage() {
   const { data: session }    = useSession();
+  const { data: platformStats } = usePlatformStats();
   const { data: stats,  isLoading: statsLoading }  = useUserStats();
   const { data: enrollRes, isLoading: enrollLoading } = useMyEnrollments();
 
@@ -21,8 +21,7 @@ export default function DashboardPage() {
 
   return (
     <>
-      <Navbar />
-      <main className="min-h-screen bg-brand-ice pt-24 pb-20">
+      <main className="min-h-screen bg-brand-ice pt-6 pb-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
           {/* Welcome banner */}
@@ -144,7 +143,9 @@ export default function DashboardPage() {
               <Link href="/courses" className="flex items-center justify-between bg-brand-blue/5 border border-brand-blue/20 rounded-2xl p-5 hover:bg-brand-blue/10 transition-colors group">
                 <div>
                   <div className="font-semibold text-brand-blue">Explore More Courses</div>
-                  <div className="text-gray-500 text-sm">25+ courses at Rs 399 each</div>
+                  <div className="text-gray-500 text-sm">
+                    {(platformStats as any)?.totalCourses > 0 ? `${(platformStats as any).totalCourses}+ courses at Rs 399 each` : 'Fresh courses added regularly'}
+                  </div>
                 </div>
                 <ChevronRight size={20} className="text-brand-blue group-hover:translate-x-1 transition-transform" />
               </Link>
@@ -157,14 +158,26 @@ export default function DashboardPage() {
                 <h3 className="font-heading font-semibold text-gray-900 mb-4 flex items-center gap-2">
                   <TrendingUp size={18} className="text-brand-green" /> Weekly Goal
                 </h3>
-                <div className="text-center mb-4">
-                  <div className="font-heading font-bold text-4xl text-brand-blue">0<span className="text-gray-400 text-xl">/3</span></div>
-                  <div className="text-gray-500 text-sm">lessons this week</div>
-                </div>
-                <div className="h-3 bg-gray-100 rounded-full overflow-hidden mb-3">
-                  <div className="h-full bg-brand-green rounded-full w-0" />
-                </div>
-                <div className="text-gray-500 text-xs text-center">Complete 3 lessons to hit your goal 🎯</div>
+                {(() => {
+                  const completed = stats?.weeklyGoal?.completed ?? 0;
+                  const target    = stats?.weeklyGoal?.target ?? 3;
+                  const pct       = Math.min(100, Math.round((completed / target) * 100));
+                  const hitGoal   = completed >= target;
+                  return (
+                    <>
+                      <div className="text-center mb-4">
+                        <div className="font-heading font-bold text-4xl text-brand-blue">{completed}<span className="text-gray-400 text-xl">/{target}</span></div>
+                        <div className="text-gray-500 text-sm">lessons this week</div>
+                      </div>
+                      <div className="h-3 bg-gray-100 rounded-full overflow-hidden mb-3">
+                        <div className={`h-full rounded-full transition-all duration-700 ${hitGoal ? 'bg-brand-green' : 'bg-brand-blue'}`} style={{ width: `${pct}%` }} />
+                      </div>
+                      <div className="text-gray-500 text-xs text-center">
+                        {hitGoal ? 'Goal reached this week! 🎉' : `Complete ${target - completed} more lesson${target - completed === 1 ? '' : 's'} to hit your goal 🎯`}
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
 
               {/* Quick links */}

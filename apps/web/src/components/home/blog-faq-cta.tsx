@@ -2,17 +2,18 @@
 
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowRight, ChevronDown, ChevronUp } from 'lucide-react';
+import { ArrowRight, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
 import { useState } from 'react';
-
-// ── Blog Preview ─────────────────────────────────────────────
-const posts = [
-  { slug: 'ai-jobs-india-2025', title: 'AI Jobs in India 2025 — Complete Guide for Freshers', excerpt: 'AI market India mein 2025 mein Rs 40,000 crore ke paar. Kaunsi skills? Konsi companies? Puri guide yahan.', date: '15 Jun 2025', readMin: 8 },
-  { slug: 'python-vs-r-data-science-hindi', title: 'Python vs R — Data Science ke liye kaunsa seekhein?', excerpt: 'Honest comparison dono ka — Indian job market perspective se. Pehle kaunsa seekhein?', date: '12 Jun 2025', readMin: 6 },
-  { slug: 'rs-399-course-worth-it', title: 'Rs 399 mein Course? Kya Yeh Sach Mein Itna Acha Hai?', excerpt: 'Honestly explain kiya hai kaise hum Rs 399 mein premium content de paate hain. No bullshit.', date: '8 Jun 2025', readMin: 5 },
-];
+import { useBlogPosts, usePlatformStats, useSiteContent } from '@/hooks/use-queries';
+import { formatDate } from '@/lib/utils';
 
 export function BlogPreview() {
+  const { data: res, isLoading } = useBlogPosts({ pageSize: '3' });
+  const posts = (res as any)?.data ?? [];
+
+  // No fabricated articles — if nothing's published yet, skip the section entirely.
+  if (!isLoading && posts.length === 0) return null;
+
   return (
     <section className="py-20 bg-brand-ice">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -26,48 +27,46 @@ export function BlogPreview() {
           <Link href="/blog" className="btn-outline text-sm flex-shrink-0">All Articles <ArrowRight size={14} /></Link>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {posts.map((post, i) => (
-            <motion.div key={post.slug}
-              initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }} transition={{ delay: i * 0.1 }}
-              whileHover={{ y: -4 }} className="group">
-              <Link href={`/blog/${post.slug}`}>
-                <div className="bg-white rounded-2xl p-6 shadow-card hover:shadow-card-hover transition-all border border-gray-100 h-full flex flex-col">
-                  <div className="flex items-center gap-2 text-xs text-gray-400 mb-3">
-                    <span>{post.date}</span>
-                    <span>·</span>
-                    <span>{post.readMin} min read</span>
+        {isLoading ? (
+          <div className="flex justify-center py-10"><Loader2 size={28} className="text-brand-blue animate-spin" /></div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {posts.map((post: any, i: number) => (
+              <motion.div key={post.slug}
+                initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }} transition={{ delay: i * 0.1 }}
+                whileHover={{ y: -4 }} className="group">
+                <Link href={`/blog/${post.slug}`}>
+                  <div className="bg-white rounded-2xl p-6 shadow-card hover:shadow-card-hover transition-all border border-gray-100 h-full flex flex-col">
+                    <div className="flex items-center gap-2 text-xs text-gray-400 mb-3">
+                      <span>{formatDate(post.publishedAt ?? post.createdAt)}</span>
+                    </div>
+                    <h3 className="font-heading font-semibold text-gray-900 text-base leading-snug mb-3 group-hover:text-brand-orange transition-colors flex-1">
+                      {post.title}
+                    </h3>
+                    <p className="text-gray-500 text-sm leading-relaxed mb-4">{post.excerpt}</p>
+                    <span className="text-brand-blue text-xs font-semibold group-hover:text-brand-orange transition-colors">
+                      Read more →
+                    </span>
                   </div>
-                  <h3 className="font-heading font-semibold text-gray-900 text-base leading-snug mb-3 group-hover:text-brand-orange transition-colors flex-1">
-                    {post.title}
-                  </h3>
-                  <p className="text-gray-500 text-sm leading-relaxed mb-4">{post.excerpt}</p>
-                  <span className="text-brand-blue text-xs font-semibold group-hover:text-brand-orange transition-colors">
-                    Read more →
-                  </span>
-                </div>
-              </Link>
-            </motion.div>
-          ))}
-        </div>
+                </Link>
+              </motion.div>
+            ))}
+          </div>
+        )}
       </div>
     </section>
   );
 }
 
 // ── FAQ Section ──────────────────────────────────────────────
-const faqs = [
-  { q: 'Kya course lifetime ke liye accessible hai?', a: 'Haan! Ek baar buy karo, lifetime access milega. Course kabhi expire nahi hoga, chahe hum future mein updates bhi karte rahein.' },
-  { q: 'Certificate kitna valid hai?', a: 'Certificate uniquely verifiable hai — har ek ka apna ID hota hai. laximotech.ai/verify pe koi bhi verify kar sakta hai. LinkedIn pe share karo, job applications mein use karo.' },
-  { q: 'Kya Hindi medium students ke liye suitable hai?', a: 'Bilkul! Ye platform specifically Hindi medium students ke liye banaya gaya hai. Explanation Hindi mein, technical terms English mein — exact wahi approach jo IIT-JEE coaching mein hoti hai.' },
-  { q: 'Agar course pasand na aaya toh?', a: '30-day money-back guarantee hai. Koi sawal nahi poochha jaayega. Email karo hello@laximotech.ai — usi din refund process ho jaata hai.' },
-  { q: 'Mobile pe kaam karta hai?', a: 'Haan, PWA hai — mobile pe bilkul smooth chalega. Android phone pe install bhi kar sakte ho. Offline viewing bhi future mein aane waali hai.' },
-  { q: 'Ek se zyada course khareed sakte hain?', a: 'Bilkul! Sab alag-alag Rs 399 ke hain. Career path bundle mein khareedne par aur discount milta hai. LAUNCH50 code se 50% off bhi milta hai launch ke dauran.' },
-];
-
 export function FaqSection() {
+  const { data: res } = useSiteContent('faq');
+  const faqs: { q: string; a: string }[] = (res as any)?.data?.items ?? [];
   const [open, setOpen] = useState<number | null>(null);
+
+  if (faqs.length === 0) return null;
+
   return (
     <section className="py-20 bg-white">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -110,6 +109,8 @@ export function FaqSection() {
 
 // ── CTA Banner ───────────────────────────────────────────────
 export function CtaBanner() {
+  const { data: stats } = usePlatformStats();
+  const courseText = (stats as any)?.totalCourses > 0 ? `${(stats as any).totalCourses}+ courses` : 'Multiple courses';
   return (
     <section className="py-20 bg-brand-ice">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
@@ -126,7 +127,7 @@ export function CtaBanner() {
               Aaj Hi Shuru Karo — Rs 399 Mein
             </h2>
             <p className="text-white/70 text-lg mb-8 max-w-xl mx-auto">
-              25+ courses. Certificate included. Hindi mein. Lifetime access. Koi excuse nahi.
+              {courseText}. Certificate included. Hindi mein. Lifetime access. Koi excuse nahi.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link href="/courses" className="bg-brand-orange text-white font-heading font-bold px-8 py-4 rounded-full shadow-orange-lg hover:bg-brand-orange-light transition-all flex items-center justify-center gap-2">
@@ -136,7 +137,7 @@ export function CtaBanner() {
                 Book Free Demo
               </Link>
             </div>
-            <p className="text-white/40 text-xs mt-6">No credit card required · Cancel anytime · 30-day refund</p>
+            <p className="text-white/40 text-xs mt-6">No credit card required · Cancel anytime</p>
           </div>
         </motion.div>
       </div>

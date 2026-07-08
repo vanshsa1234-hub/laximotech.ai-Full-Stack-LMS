@@ -1,10 +1,63 @@
 'use client';
 
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
-import { Play, Clock, CheckCircle, BookOpen } from 'lucide-react';
-import { useMyEnrollments } from '@/hooks/use-queries';
+import { Play, Clock, CheckCircle, BookOpen, Star, Loader2 } from 'lucide-react';
+import { useMyEnrollments, useMyReview, useUpsertReview } from '@/hooks/use-queries';
 import { formatDate } from '@/lib/utils';
+import toast from 'react-hot-toast';
+
+function RateCourse({ courseId }: { courseId: string }) {
+  const { data: myReview, isLoading } = useMyReview(courseId);
+  const upsertReview = useUpsertReview();
+  const [hoverRating, setHoverRating] = useState(0);
+  const [comment, setComment] = useState('');
+  const [showComment, setShowComment] = useState(false);
+
+  const existingRating = (myReview as any)?.rating;
+
+  const submit = (rating: number) => {
+    upsertReview.mutate({ courseId, data: { rating, comment: comment.trim() || undefined } }, {
+      onSuccess: () => { toast.success('Thanks for rating this course!'); setShowComment(false); },
+      onError:   () => toast.error('Failed to submit rating.'),
+    });
+  };
+
+  if (isLoading) return null;
+
+  return (
+    <div className="mt-3 pt-3 border-t border-gray-50">
+      <div className="flex items-center gap-1">
+        {[1,2,3,4,5].map(s => (
+          <button key={s} type="button"
+            onMouseEnter={() => setHoverRating(s)} onMouseLeave={() => setHoverRating(0)}
+            onClick={() => { setShowComment(true); if (!showComment) submit(s); }}
+            disabled={upsertReview.isPending}>
+            <Star size={16} className={
+              (hoverRating || existingRating || 0) >= s ? 'fill-yellow-400 text-yellow-400' : 'fill-gray-200 text-gray-200'
+            } />
+          </button>
+        ))}
+        <span className="text-xs text-gray-500 ml-2">
+          {existingRating ? 'Your rating — click to change' : 'Rate this course'}
+        </span>
+        {upsertReview.isPending && <Loader2 size={12} className="animate-spin text-gray-400 ml-1" />}
+      </div>
+      {showComment && (
+        <div className="mt-2 flex gap-2">
+          <input value={comment} onChange={e => setComment(e.target.value)}
+            placeholder="Add a comment (optional)"
+            className="flex-1 text-xs bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 outline-none focus:border-brand-orange" />
+          <button onClick={() => submit(existingRating || hoverRating || 5)}
+            className="text-xs font-semibold text-brand-blue hover:text-brand-orange transition-colors flex-shrink-0">
+            Save
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function MyCoursesPage() {
   const { data: res, isLoading } = useMyEnrollments();
@@ -99,6 +152,7 @@ export default function MyCoursesPage() {
                             Review →
                           </Link>
                         </div>
+                        <RateCourse courseId={course.id} />
                       </motion.div>
                     );
                   })}

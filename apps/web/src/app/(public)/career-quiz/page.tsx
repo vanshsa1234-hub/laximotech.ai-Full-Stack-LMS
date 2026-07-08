@@ -5,9 +5,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import { Navbar } from '@/components/layout/navbar';
 import { Footer } from '@/components/layout/footer';
-import { ArrowRight, ArrowLeft, Brain, CheckCircle, TrendingUp, Sparkles } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Brain, CheckCircle, TrendingUp, Sparkles, Loader2 } from 'lucide-react';
+import { useSiteContent } from '@/hooks/use-queries';
 
-const QUESTIONS = [
+// Fallback used only if the CMS entry hasn't loaded yet / API is unreachable —
+// the admin-edited version from useSiteContent('career-quiz') always takes priority.
+const DEFAULT_QUESTIONS = [
   {
     id: 'interest',
     question: 'Aapki sabse zyada interest kisme hai?',
@@ -139,6 +142,12 @@ function getRecommendation(answers: Record<string, string>): Recommendation[] {
 }
 
 export default function CareerQuizPage() {
+  const { data: res, isLoading: contentLoading } = useSiteContent('career-quiz');
+  const cmsContent = (res as any)?.data;
+  const QUESTIONS = cmsContent?.questions ?? DEFAULT_QUESTIONS;
+  const heroTitle    = cmsContent?.heroTitle;
+  const heroSubtitle = cmsContent?.heroSubtitle;
+
   const [step,    setStep]    = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [results, setResults] = useState<Recommendation[] | null>(null);
@@ -158,6 +167,18 @@ export default function CareerQuizPage() {
 
   const reset = () => { setStep(0); setAnswers({}); setResults(null); };
 
+  if (contentLoading) {
+    return (
+      <>
+        <Navbar />
+        <div className="min-h-screen flex items-center justify-center bg-brand-ice">
+          <Loader2 size={28} className="text-brand-orange animate-spin" />
+        </div>
+        <Footer />
+      </>
+    );
+  }
+
   return (
     <>
       <Navbar />
@@ -168,9 +189,9 @@ export default function CareerQuizPage() {
               <Sparkles size={14} className="text-brand-orange" /> AI-Powered Career Recommender
             </div>
             <h1 className="font-heading font-bold text-white text-4xl md:text-5xl mb-3">
-              Kaunsa Career <span className="text-brand-orange">Best Hai Aapke Liye?</span>
+              {heroTitle ?? <>Kaunsa Career <span className="text-brand-orange">Best Hai Aapke Liye?</span></>}
             </h1>
-            <p className="text-white/70 text-lg">5 sawalon mein pata karo — AI aapke liye best path suggest karega</p>
+            <p className="text-white/70 text-lg">{heroSubtitle ?? '5 sawalon mein pata karo — AI aapke liye best path suggest karega'}</p>
           </motion.div>
         </div>
 

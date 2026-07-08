@@ -136,6 +136,20 @@ export const aiApi = {
 
 // ── Storage ──────────────────────────────────────────────────
 export const storageApi = {
+  // Real local-disk upload — no AWS account needed. Returns { url }.
+  uploadFile: (file: File, folder: string, onProgress?: (pct: number) => void) => {
+    const formData = new FormData();
+    formData.append('folder', folder); // must come before 'file' — multer needs this parsed first
+    formData.append('file', file);
+    return api.post('/storage/upload', formData, {
+      headers: { 'Content-Type': undefined }, // let the browser set the multipart boundary itself
+      timeout: 10 * 60 * 1000, // 10 minutes — the default 15s timeout is nowhere near enough for real video files
+      onUploadProgress: (e) => {
+        if (onProgress && e.total) onProgress(Math.round((e.loaded / e.total) * 100));
+      },
+    });
+  },
+  // Legacy S3 path — only works once real AWS credentials are configured.
   getUploadUrl: (folder: string, fileName: string, contentType: string) =>
     api.post('/storage/upload-url', { folder, fileName, contentType }),
 };
@@ -144,12 +158,26 @@ export const storageApi = {
 export const blogApi = {
   list: (params?: Record<string, string>) => api.get('/blog', { params }),
   get:  (slug: string)                    => api.get(`/blog/${slug}`),
+  adminList: (params?: Record<string, string>) => api.get('/blog/admin/all', { params }),
+  adminGet:  (id: string)                       => api.get(`/blog/admin/${id}`),
+  create:    (data: any)                        => api.post('/blog', data),
+  update:    (id: string, data: any)            => api.patch(`/blog/${id}`, data),
+  publish:   (id: string)                       => api.patch(`/blog/${id}/publish`),
+  unpublish: (id: string)                       => api.patch(`/blog/${id}/unpublish`),
+  remove:    (id: string)                       => api.delete(`/blog/${id}`),
 };
 
 // ── Career Paths ─────────────────────────────────────────────
 export const careerPathsApi = {
   list: ()             => api.get('/career-paths'),
   get:  (slug: string) => api.get(`/career-paths/${slug}`),
+  adminGet:    (id: string)          => api.get(`/career-paths/admin/${id}`),
+  create:      (data: any)           => api.post('/career-paths', data),
+  update:      (id: string, data: any) => api.patch(`/career-paths/${id}`, data),
+  remove:      (id: string)          => api.delete(`/career-paths/${id}`),
+  addCourse:   (id: string, data: { courseId: string; step: number; label: string }) =>
+    api.post(`/career-paths/${id}/courses`, data),
+  removeCourse: (entryId: string) => api.delete(`/career-paths/courses/${entryId}`),
 };
 
 // ── Comments ─────────────────────────────────────────────────
@@ -165,6 +193,7 @@ export const commentsApi = {
 export const usersApi = {
   me:          () => api.get('/users/me'),
   stats:       () => api.get('/users/me/stats'),
+  activity:    () => api.get('/users/me/activity'),
   update:      (data: any) => api.patch('/users/me', data),
   leaderboard: (limit = 20) => api.get('/users/leaderboard', { params: { limit } }),
 };
@@ -173,8 +202,55 @@ export const usersApi = {
 export const adminApi = {
   stats:        ()                                => api.get('/admin/stats'),
   students:     (params?: Record<string, string>) => api.get('/admin/students', { params }),
+  studentEnrollments: (userId: string) => api.get(`/admin/students/${userId}/enrollments`),
   orders:       (params?: Record<string, string>) => api.get('/admin/orders', { params }),
   createCoupon: (body: any)                        => api.post('/admin/coupons', body),
   coupons:      ()                                 => api.get('/admin/coupons'),
   toggleCoupon: (id: string, isActive: boolean)    => api.patch(`/admin/coupons/${id}/toggle`, { isActive }),
+};
+
+// ── Demo Requests ────────────────────────────────────────────
+export const demoRequestsApi = {
+  create: (data: { name: string; phone: string; email: string; topic: string; slot: string; mode: string }) =>
+    api.post('/demo-requests', data),
+  list:   (params?: Record<string, string>) => api.get('/demo-requests', { params }),
+  updateStatus: (id: string, status: string) => api.patch(`/demo-requests/${id}/status`, { status }),
+};
+
+// ── Site Content (CMS) ───────────────────────────────────────
+export const siteContentApi = {
+  get:      (key: string) => api.get(`/site-content/${key}`),
+  getAll:   ()             => api.get('/site-content'),
+  update:   (key: string, data: any) => api.put(`/site-content/${key}`, { data }),
+  reset:    (key: string) => api.delete(`/site-content/${key}`),
+};
+
+// ── Contact Messages ─────────────────────────────────────────
+export const contactMessagesApi = {
+  create: (data: { name: string; email: string; subject: string; message: string }) =>
+    api.post('/contact-messages', data),
+  list:   (params?: Record<string, string>) => api.get('/contact-messages', { params }),
+  updateStatus: (id: string, status: string) => api.patch(`/contact-messages/${id}/status`, { status }),
+};
+
+// ── Reviews & Platform Stats ─────────────────────────────────
+export const reviewsApi = {
+  upsert:   (courseId: string, data: { rating: number; comment?: string }) =>
+    api.post(`/courses/${courseId}/reviews`, data),
+  mine:     (courseId: string) => api.get(`/courses/${courseId}/reviews/mine`),
+  featured: () => api.get('/reviews/featured'),
+};
+
+export const platformStatsApi = {
+  get: () => api.get('/platform-stats'),
+};
+
+// ── Instructors (admin) ───────────────────────────────────────
+export const instructorsApi = {
+  list:   () => api.get('/instructors'),
+  get:    (id: string) => api.get(`/instructors/${id}`),
+  create: (data: { name: string; email: string; bio?: string; phone?: string; city?: string; linkedinUrl?: string; image?: string }) =>
+    api.post('/instructors', data),
+  update: (id: string, data: any) => api.patch(`/instructors/${id}`, data),
+  remove: (id: string) => api.delete(`/instructors/${id}`),
 };

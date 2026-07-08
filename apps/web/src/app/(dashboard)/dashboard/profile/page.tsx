@@ -3,12 +3,17 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useSession } from 'next-auth/react';
-import { User, Save, Linkedin, MapPin, Phone, FileText, Loader2, CheckCircle } from 'lucide-react';
+import { User, Save, Linkedin, MapPin, Phone, FileText, Loader2, CheckCircle,
+  Flame, Zap, Award, BookOpen, Calendar, GraduationCap } from 'lucide-react';
 import { usersApi } from '@/lib/api';
+import { useProfile, useUserStats } from '@/hooks/use-queries';
+import { formatDate } from '@/lib/utils';
 import toast from 'react-hot-toast';
 
 export default function ProfilePage() {
   const { data: session } = useSession();
+  const { data: profile }   = useProfile();
+  const { data: userStats } = useUserStats();
   const [saving,  setSaving]  = useState(false);
   const [saved,   setSaved]   = useState(false);
   const [loading, setLoading] = useState(true);
@@ -69,21 +74,67 @@ export default function ProfilePage() {
           <User size={24} className="text-brand-blue" /> My Profile
         </h1>
 
-        {/* Avatar card */}
+        {/* User Card — real stats, no placeholder text */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-2xl p-6 shadow-card border border-gray-100 mb-6">
-          <div className="flex items-center gap-5">
-            <div className="w-20 h-20 rounded-2xl bg-brand-blue flex items-center justify-center text-white text-3xl font-bold flex-shrink-0">
-              {(form.name || session?.user?.name || 'U')[0].toUpperCase()}
+          className="bg-gradient-to-br from-brand-blue to-purple-700 rounded-2xl p-6 shadow-card mb-6 text-white overflow-hidden relative">
+          <div className="flex items-center gap-5 mb-6">
+            <div className="w-20 h-20 rounded-2xl bg-white/15 backdrop-blur flex items-center justify-center text-white text-3xl font-bold flex-shrink-0 overflow-hidden border-2 border-white/20">
+              {session?.user?.image ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={session.user.image} alt={form.name} className="w-full h-full object-cover" />
+              ) : (
+                (form.name || session?.user?.name || 'U')[0].toUpperCase()
+              )}
             </div>
-            <div>
-              <div className="font-heading font-bold text-gray-900 text-xl">{form.name || session?.user?.name}</div>
-              <div className="text-gray-500 text-sm">{session?.user?.email}</div>
-              <div className="flex items-center gap-2 mt-2">
-                <span className="bg-brand-blue/10 text-brand-blue text-xs font-semibold px-3 py-1 rounded-full">Student</span>
+            <div className="min-w-0">
+              <div className="font-heading font-bold text-white text-xl truncate">{form.name || session?.user?.name}</div>
+              <div className="text-white/70 text-sm truncate">{session?.user?.email}</div>
+              <div className="flex items-center gap-2 mt-2 flex-wrap">
+                <span className="bg-white/20 backdrop-blur text-white text-xs font-semibold px-3 py-1 rounded-full capitalize">
+                  {(profile?.role ?? 'STUDENT').toLowerCase()}
+                </span>
+                {profile?.createdAt && (
+                  <span className="flex items-center gap-1 text-white/60 text-xs">
+                    <Calendar size={11} /> Joined {formatDate(profile.createdAt)}
+                  </span>
+                )}
               </div>
             </div>
           </div>
+
+          {/* Real stat grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="bg-white/10 backdrop-blur rounded-xl p-3 text-center">
+              <Flame size={16} className="mx-auto mb-1 text-orange-300" />
+              <div className="font-heading font-bold text-lg">{profile?.streakDays ?? 0}</div>
+              <div className="text-white/60 text-[11px]">Day Streak</div>
+            </div>
+            <div className="bg-white/10 backdrop-blur rounded-xl p-3 text-center">
+              <Zap size={16} className="mx-auto mb-1 text-yellow-300" />
+              <div className="font-heading font-bold text-lg">{profile?.xpPoints ?? 0}</div>
+              <div className="text-white/60 text-[11px]">Total XP</div>
+            </div>
+            <div className="bg-white/10 backdrop-blur rounded-xl p-3 text-center">
+              <BookOpen size={16} className="mx-auto mb-1 text-blue-200" />
+              <div className="font-heading font-bold text-lg">{profile?._count?.enrollments ?? 0}</div>
+              <div className="text-white/60 text-[11px]">Courses Enrolled</div>
+            </div>
+            <div className="bg-white/10 backdrop-blur rounded-xl p-3 text-center">
+              <Award size={16} className="mx-auto mb-1 text-green-200" />
+              <div className="font-heading font-bold text-lg">{profile?._count?.certificates ?? 0}</div>
+              <div className="text-white/60 text-[11px]">Certificates</div>
+            </div>
+          </div>
+
+          {userStats?.completedCourses != null && (
+            <div className="mt-4 pt-4 border-t border-white/15 flex items-center gap-2 text-sm text-white/80">
+              <GraduationCap size={15} />
+              <span>
+                <strong>{userStats.completedCourses}</strong> of <strong>{profile?._count?.enrollments ?? 0}</strong> courses completed
+                {userStats.totalWatchedHrs != null && <> · <strong>{userStats.totalWatchedHrs}h</strong> watched total</>}
+              </span>
+            </div>
+          )}
         </motion.div>
 
         {/* Edit form */}

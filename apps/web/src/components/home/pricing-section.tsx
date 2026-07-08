@@ -38,7 +38,6 @@ export function PricingSection() {
           <div className="relative z-10 flex flex-col lg:flex-row items-start gap-10">
             {/* Price */}
             <div className="flex-shrink-0 text-center lg:text-left">
-              <div className="text-white/60 text-sm mb-1 line-through">Rs 4,999</div>
               <div className="flex items-end gap-2 justify-center lg:justify-start">
                 <span className="text-white/70 text-2xl font-heading">Rs</span>
                 <span className="font-heading font-bold text-7xl text-white leading-none">399</span>
@@ -50,13 +49,6 @@ export function PricingSection() {
                   <Zap size={16} className="fill-white" /> Enroll Now
                 </Link>
                 <div className="text-white/50 text-xs text-center">No subscription. Pay once, keep forever.</div>
-              </div>
-
-              {/* Coupon hint */}
-              <div className="mt-4 bg-white/10 backdrop-blur-sm rounded-xl px-4 py-3 text-center">
-                <div className="text-xs text-white/60 mb-1">Launch offer — use code</div>
-                <div className="font-mono font-bold text-brand-orange tracking-widest text-lg">LAUNCH50</div>
-                <div className="text-xs text-white/50">50% off — limited time</div>
               </div>
             </div>
 

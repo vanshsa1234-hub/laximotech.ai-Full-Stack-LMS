@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Navbar } from '@/components/layout/navbar';
 import { Footer } from '@/components/layout/footer';
 import { Clock, ArrowRight } from 'lucide-react';
@@ -39,8 +40,12 @@ export default function BlogPage() {
               <motion.div initial={{opacity:0,y:20}} animate={{opacity:1,y:0}} className="mb-8 group">
                 <Link href={`/blog/${posts[0].slug}`}>
                   <div className="bg-white rounded-3xl overflow-hidden shadow-card hover:shadow-card-hover transition-all border border-gray-100">
-                    <div className="h-56 bg-gradient-to-br from-brand-blue to-purple-700 flex items-center justify-center">
-                      <span className="text-8xl">{TAG_EMOJI[posts[0].tags?.[0]?.name] ?? '📝'}</span>
+                    <div className="h-56 relative bg-gradient-to-br from-brand-blue to-purple-700 flex items-center justify-center overflow-hidden">
+                      {posts[0].coverImage ? (
+                        <Image src={posts[0].coverImage} alt={posts[0].title} fill className="object-cover" />
+                      ) : (
+                        <span className="text-8xl">{TAG_EMOJI[posts[0].tags?.[0]?.name] ?? '📝'}</span>
+                      )}
                     </div>
                     <div className="p-8">
                       <div className="flex items-center gap-3 mb-3">
@@ -62,8 +67,12 @@ export default function BlogPage() {
                     transition={{delay:i*0.08}} whileHover={{y:-4}} className="group">
                     <Link href={`/blog/${post.slug}`}>
                       <div className="bg-white rounded-2xl overflow-hidden shadow-card hover:shadow-card-hover transition-all border border-gray-100 h-full flex flex-col">
-                        <div className="h-36 bg-gradient-to-br from-brand-blue/10 to-brand-orange/10 flex items-center justify-center">
-                          <span className="text-4xl">{TAG_EMOJI[post.tags?.[0]?.name] ?? '📝'}</span>
+                        <div className="h-36 relative bg-gradient-to-br from-brand-blue/10 to-brand-orange/10 flex items-center justify-center overflow-hidden">
+                          {post.coverImage ? (
+                            <Image src={post.coverImage} alt={post.title} fill className="object-cover" />
+                          ) : (
+                            <span className="text-4xl">{TAG_EMOJI[post.tags?.[0]?.name] ?? '📝'}</span>
+                          )}
                         </div>
                         <div className="p-5 flex flex-col flex-1">
                           <div className="flex items-center gap-2 mb-3">

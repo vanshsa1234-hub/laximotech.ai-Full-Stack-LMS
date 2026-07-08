@@ -5,7 +5,8 @@ import { useSession } from 'next-auth/react';
 import {
   coursesApi, enrollmentsApi, progressApi,
   quizzesApi, certificatesApi, blogApi,
-  careerPathsApi, commentsApi, adminApi, usersApi,
+  careerPathsApi, commentsApi, adminApi, usersApi, demoRequestsApi,
+  siteContentApi, contactMessagesApi, reviewsApi, platformStatsApi, instructorsApi,
 } from '@/lib/api';
 
 // ── Courses ───────────────────────────────────────────────────
@@ -101,6 +102,13 @@ export function useMyCertificates() {
     queryKey: ['certificates', 'me'],
     queryFn:  () => certificatesApi.mine().then(r => r.data),
     enabled:  !!session,
+    // PDF generation happens async right after a certificate is issued —
+    // keep refetching for a bit so the download link appears without a manual reload.
+    refetchInterval: (query) => {
+      const certs = (query.state.data as any[]) ?? [];
+      const stillGenerating = certs.some(c => !c.pdfUrl);
+      return stillGenerating ? 4000 : false;
+    },
   });
 }
 
@@ -188,6 +196,26 @@ export function useLeaderboard() {
   });
 }
 
+export function useProfile() {
+  const { data: session } = useSession();
+  return useQuery({
+    queryKey: ['my-profile'],
+    queryFn:  () => usersApi.me().then(r => r.data),
+    enabled:  !!session,
+    staleTime: 60 * 1000,
+  });
+}
+
+export function useActivityHeatmap() {
+  const { data: session } = useSession();
+  return useQuery({
+    queryKey: ['activity-heatmap'],
+    queryFn:  () => usersApi.activity().then(r => r.data),
+    enabled:  !!session,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
 // ── Admin ─────────────────────────────────────────────────────
 export function useAdminStats() {
   return useQuery({
@@ -201,5 +229,308 @@ export function useAdminStudents(params?: Record<string, string>) {
   return useQuery({
     queryKey: ['admin-students', params],
     queryFn:  () => adminApi.students(params).then(r => r.data),
+  });
+}
+
+// ── Demo Requests ────────────────────────────────────────────
+export function useAdminDemoRequests(params?: Record<string, string>) {
+  return useQuery({
+    queryKey: ['admin-demo-requests', params],
+    queryFn:  () => demoRequestsApi.list(params).then(r => r.data),
+  });
+}
+
+export function useUpdateDemoRequestStatus() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, status }: { id: string; status: string }) =>
+      demoRequestsApi.updateStatus(id, status),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin-demo-requests'] }),
+  });
+}
+
+// ── Admin Blog ───────────────────────────────────────────────
+export function useAdminBlogPosts(params?: Record<string, string>) {
+  return useQuery({
+    queryKey: ['admin-blog-posts', params],
+    queryFn:  () => blogApi.adminList(params).then(r => r.data),
+  });
+}
+
+export function useAdminBlogPost(id: string) {
+  return useQuery({
+    queryKey: ['admin-blog-post', id],
+    queryFn:  () => blogApi.adminGet(id).then(r => r.data),
+    enabled:  !!id,
+  });
+}
+
+export function useCreateBlogPost() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: any) => blogApi.create(data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin-blog-posts'] }),
+  });
+}
+
+export function useUpdateBlogPost() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: any }) => blogApi.update(id, data),
+    onSuccess: (_r, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['admin-blog-posts'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-blog-post', vars.id] });
+    },
+  });
+}
+
+export function useTogglePublishBlogPost() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, publish }: { id: string; publish: boolean }) =>
+      publish ? blogApi.publish(id) : blogApi.unpublish(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin-blog-posts'] }),
+  });
+}
+
+export function useDeleteBlogPost() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => blogApi.remove(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin-blog-posts'] }),
+  });
+}
+
+// ── Admin Career Paths ───────────────────────────────────────
+export function useAdminCareerPaths() {
+  return useQuery({
+    queryKey: ['admin-career-paths'],
+    queryFn:  () => careerPathsApi.list().then(r => r.data),
+  });
+}
+
+export function useAdminCareerPath(id: string) {
+  return useQuery({
+    queryKey: ['admin-career-path', id],
+    queryFn:  () => careerPathsApi.adminGet(id).then(r => r.data),
+    enabled:  !!id,
+  });
+}
+
+export function useCreateCareerPath() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: any) => careerPathsApi.create(data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin-career-paths'] }),
+  });
+}
+
+export function useUpdateCareerPath() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: any }) => careerPathsApi.update(id, data),
+    onSuccess: (_r, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['admin-career-paths'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-career-path', vars.id] });
+    },
+  });
+}
+
+export function useDeleteCareerPath() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => careerPathsApi.remove(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin-career-paths'] }),
+  });
+}
+
+export function useAddCourseToPath() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ pathId, data }: { pathId: string; data: { courseId: string; step: number; label: string } }) =>
+      careerPathsApi.addCourse(pathId, data),
+    onSuccess: (_r, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['admin-career-paths'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-career-path', vars.pathId] });
+    },
+  });
+}
+
+export function useRemoveCourseFromPath() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (entryId: string) => careerPathsApi.removeCourse(entryId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-career-paths'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-career-path'] });
+    },
+  });
+}
+
+// ── Site Content (CMS) ───────────────────────────────────────
+export function useSiteContent(key: string) {
+  return useQuery({
+    queryKey: ['site-content', key],
+    queryFn:  () => siteContentApi.get(key).then(r => r.data),
+  });
+}
+
+export function useAdminSiteContent() {
+  return useQuery({
+    queryKey: ['admin-site-content'],
+    queryFn:  () => siteContentApi.getAll().then(r => r.data),
+  });
+}
+
+export function useUpdateSiteContent() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ key, data }: { key: string; data: any }) => siteContentApi.update(key, data),
+    onSuccess: (_r, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['admin-site-content'] });
+      queryClient.invalidateQueries({ queryKey: ['site-content', vars.key] });
+    },
+  });
+}
+
+export function useResetSiteContent() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (key: string) => siteContentApi.reset(key),
+    onSuccess: (_r, key) => {
+      queryClient.invalidateQueries({ queryKey: ['admin-site-content'] });
+      queryClient.invalidateQueries({ queryKey: ['site-content', key] });
+    },
+  });
+}
+
+// ── Contact Messages ─────────────────────────────────────────
+export function useCreateContactMessage() {
+  return useMutation({
+    mutationFn: (data: { name: string; email: string; subject: string; message: string }) =>
+      contactMessagesApi.create(data),
+  });
+}
+
+export function useAdminContactMessages(params?: Record<string, string>) {
+  return useQuery({
+    queryKey: ['admin-contact-messages', params],
+    queryFn:  () => contactMessagesApi.list(params).then(r => r.data),
+  });
+}
+
+export function useUpdateContactMessageStatus() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, status }: { id: string; status: string }) =>
+      contactMessagesApi.updateStatus(id, status),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin-contact-messages'] }),
+  });
+}
+
+// ── Reviews & Platform Stats ─────────────────────────────────
+export function useFeaturedReviews() {
+  return useQuery({
+    queryKey: ['featured-reviews'],
+    queryFn:  () => reviewsApi.featured().then(r => r.data),
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function usePlatformStats() {
+  return useQuery({
+    queryKey: ['platform-stats'],
+    queryFn:  () => platformStatsApi.get().then(r => r.data),
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useMyReview(courseId: string) {
+  return useQuery({
+    queryKey: ['my-review', courseId],
+    queryFn:  () => reviewsApi.mine(courseId).then(r => r.data),
+    enabled:  !!courseId,
+  });
+}
+
+export function useUpsertReview() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ courseId, data }: { courseId: string; data: { rating: number; comment?: string } }) =>
+      reviewsApi.upsert(courseId, data),
+    onSuccess: (_r, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['my-review', vars.courseId] });
+      queryClient.invalidateQueries({ queryKey: ['courses'] });
+      queryClient.invalidateQueries({ queryKey: ['featured-reviews'] });
+      queryClient.invalidateQueries({ queryKey: ['platform-stats'] });
+    },
+  });
+}
+
+// ── Admin Coupons ────────────────────────────────────────────
+export function useAdminCoupons() {
+  return useQuery({
+    queryKey: ['admin-coupons'],
+    queryFn:  () => adminApi.coupons().then(r => r.data),
+  });
+}
+
+export function useCreateCoupon() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { code: string; discountPct: number; maxUses?: number; expiresAt?: string }) =>
+      adminApi.createCoupon(data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin-coupons'] }),
+  });
+}
+
+export function useToggleCoupon() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) => adminApi.toggleCoupon(id, isActive),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin-coupons'] }),
+  });
+}
+
+// ── Instructors (admin) ──────────────────────────────────────
+export function useAdminInstructors() {
+  return useQuery({
+    queryKey: ['admin-instructors'],
+    queryFn:  () => instructorsApi.list().then(r => r.data),
+  });
+}
+
+export function useAdminInstructor(id: string) {
+  return useQuery({
+    queryKey: ['admin-instructor', id],
+    queryFn:  () => instructorsApi.get(id).then(r => r.data),
+    enabled:  !!id,
+  });
+}
+
+export function useCreateInstructor() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: any) => instructorsApi.create(data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin-instructors'] }),
+  });
+}
+
+export function useUpdateInstructor() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: any }) => instructorsApi.update(id, data),
+    onSuccess: (_r, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['admin-instructors'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-instructor', vars.id] });
+    },
+  });
+}
+
+export function useDeleteInstructor() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => instructorsApi.remove(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin-instructors'] }),
   });
 }

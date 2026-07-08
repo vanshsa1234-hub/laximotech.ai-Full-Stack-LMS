@@ -1,24 +1,31 @@
 'use client';
 import { useState } from 'react';
+import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Plus, FileText, Eye, Edit, Globe, Lock } from 'lucide-react';
+import { Plus, FileText, Eye, Edit, Globe, Lock, Trash2, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
-
-const POSTS = [
-  { id:'b1', title:'AI Jobs in India 2025',           slug:'ai-jobs-india-2025',        isPublished:true,  date:'15 Jun 2025', readMin:8  },
-  { id:'b2', title:'Python vs R for Data Science',    slug:'python-vs-r-data-science',  isPublished:true,  date:'12 Jun 2025', readMin:6  },
-  { id:'b3', title:'Rs 399 Course — Worth It?',       slug:'rs-399-course-worth-it',    isPublished:true,  date:'8 Jun 2025',  readMin:5  },
-  { id:'b4', title:'Machine Learning Roadmap 2025',   slug:'machine-learning-roadmap',  isPublished:true,  date:'5 Jun 2025',  readMin:10 },
-  { id:'b5', title:'Cybersecurity Career in India',   slug:'cybersecurity-career',      isPublished:false, date:'Draft',       readMin:7  },
-  { id:'b6', title:'10 IoT Projects for Beginners',   slug:'iot-projects-beginners',    isPublished:false, date:'Draft',       readMin:9  },
-];
+import { useAdminBlogPosts, useTogglePublishBlogPost, useDeleteBlogPost } from '@/hooks/use-queries';
+import { formatDate } from '@/lib/utils';
 
 export default function AdminBlogPage() {
-  const [posts, setPosts] = useState(POSTS);
+  const [statusFilter, setStatusFilter] = useState('');
+  const { data: res, isLoading } = useAdminBlogPosts(statusFilter ? { status: statusFilter } : undefined);
+  const togglePublish = useTogglePublishBlogPost();
+  const deletePost = useDeleteBlogPost();
 
-  const togglePublish = (id: string) => {
-    setPosts(prev => prev.map(p => p.id === id ? { ...p, isPublished: !p.isPublished } : p));
-    toast.success('Post status updated!');
+  const posts = (res as any)?.data ?? [];
+  const publishedCount = posts.filter((p: any) => p.isPublished).length;
+  const draftCount = posts.filter((p: any) => !p.isPublished).length;
+
+  const handleToggle = (post: any) => {
+    togglePublish.mutate({ id: post.id, publish: !post.isPublished }, {
+      onSuccess: () => toast.success(post.isPublished ? 'Post unpublished' : 'Post published!'),
+    });
+  };
+
+  const handleDelete = (post: any) => {
+    if (!confirm(`Delete "${post.title}"? This cannot be undone.`)) return;
+    deletePost.mutate(post.id, { onSuccess: () => toast.success('Post deleted') });
   };
 
   return (
@@ -26,63 +33,86 @@ export default function AdminBlogPage() {
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="font-heading font-bold text-white text-2xl">Blog Posts</h1>
-          <p className="text-gray-500 text-sm mt-1">{posts.filter(p => p.isPublished).length} published · {posts.filter(p => !p.isPublished).length} drafts</p>
+          <p className="text-gray-500 text-sm mt-1">{publishedCount} published · {draftCount} drafts</p>
         </div>
-        <button onClick={() => toast('TipTap rich text editor coming in Phase 3!')}
+        <Link href="/admin/blog/new"
           className="flex items-center gap-2 bg-brand-orange text-white font-semibold px-4 py-2.5 rounded-xl text-sm hover:bg-brand-orange-light transition-colors">
           <Plus size={16} /> New Post
-        </button>
+        </Link>
       </div>
 
-      <div className="bg-gray-900 rounded-2xl border border-gray-800 overflow-hidden">
-        <table className="w-full">
-          <thead>
-            <tr className="border-b border-gray-800">
-              {['Title', 'Status', 'Date', 'Read Time', 'Actions'].map(h => (
-                <th key={h} className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {posts.map((post, i) => (
-              <motion.tr key={post.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.05 }}
-                className="border-b border-gray-800/50 hover:bg-gray-800/30 transition-colors">
-                <td className="px-5 py-4">
-                  <div className="flex items-center gap-3">
-                    <FileText size={14} className="text-gray-500 flex-shrink-0" />
-                    <span className="text-white text-sm font-medium">{post.title}</span>
-                  </div>
-                </td>
-                <td className="px-5 py-4">
-                  <button onClick={() => togglePublish(post.id)}
-                    className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full transition-all ${
-                      post.isPublished ? 'bg-green-500/10 text-green-400' : 'bg-gray-700 text-gray-500'
-                    }`}>
-                    {post.isPublished ? <Globe size={11} /> : <Lock size={11} />}
-                    {post.isPublished ? 'Published' : 'Draft'}
-                  </button>
-                </td>
-                <td className="px-5 py-4 text-gray-400 text-sm">{post.date}</td>
-                <td className="px-5 py-4 text-gray-400 text-sm">{post.readMin} min</td>
-                <td className="px-5 py-4">
-                  <div className="flex items-center gap-2">
-                    {post.isPublished && (
-                      <button onClick={() => window.open(`/blog/${post.slug}`, '_blank')}
-                        className="p-1.5 text-gray-500 hover:text-white hover:bg-gray-700 rounded-lg transition-all">
-                        <Eye size={14} />
-                      </button>
-                    )}
-                    <button onClick={() => toast('Full TipTap editor in Phase 3!')}
-                      className="p-1.5 text-gray-500 hover:text-brand-orange hover:bg-brand-orange/10 rounded-lg transition-all">
-                      <Edit size={14} />
-                    </button>
-                  </div>
-                </td>
-              </motion.tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="flex flex-wrap gap-2 mb-6">
+        {[{ v: '', l: 'All' }, { v: 'published', l: 'Published' }, { v: 'draft', l: 'Drafts' }].map(f => (
+          <button key={f.v} onClick={() => setStatusFilter(f.v)}
+            className={`px-4 py-2 rounded-xl text-xs font-semibold border transition-all ${
+              statusFilter === f.v ? 'bg-brand-orange text-white border-brand-orange' : 'bg-gray-900 text-gray-400 border-gray-800 hover:border-gray-700'
+            }`}>
+            {f.l}
+          </button>
+        ))}
       </div>
+
+      {isLoading ? (
+        <div className="flex justify-center py-20"><Loader2 size={28} className="text-brand-orange animate-spin" /></div>
+      ) : posts.length === 0 ? (
+        <div className="text-center py-20 text-gray-500">No blog posts yet. Create your first one.</div>
+      ) : (
+        <div className="bg-gray-900 rounded-2xl border border-gray-800 overflow-hidden">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-gray-800">
+                {['Title', 'Status', 'Date', 'Author', 'Actions'].map(h => (
+                  <th key={h} className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {posts.map((post: any, i: number) => (
+                <motion.tr key={post.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.05 }}
+                  className="border-b border-gray-800/50 hover:bg-gray-800/30 transition-colors">
+                  <td className="px-5 py-4">
+                    <div className="flex items-center gap-3">
+                      <FileText size={14} className="text-gray-500 flex-shrink-0" />
+                      <span className="text-white text-sm font-medium">{post.title}</span>
+                    </div>
+                  </td>
+                  <td className="px-5 py-4">
+                    <button onClick={() => handleToggle(post)} disabled={togglePublish.isPending}
+                      className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full transition-all ${
+                        post.isPublished ? 'bg-green-500/10 text-green-400' : 'bg-gray-700 text-gray-500'
+                      }`}>
+                      {post.isPublished ? <Globe size={11} /> : <Lock size={11} />}
+                      {post.isPublished ? 'Published' : 'Draft'}
+                    </button>
+                  </td>
+                  <td className="px-5 py-4 text-gray-400 text-sm">
+                    {post.isPublished && post.publishedAt ? formatDate(post.publishedAt) : 'Draft'}
+                  </td>
+                  <td className="px-5 py-4 text-gray-400 text-sm">{post.author?.name ?? '—'}</td>
+                  <td className="px-5 py-4">
+                    <div className="flex items-center gap-2">
+                      {post.isPublished && (
+                        <button onClick={() => window.open(`/blog/${post.slug}`, '_blank')}
+                          className="p-1.5 text-gray-500 hover:text-white hover:bg-gray-700 rounded-lg transition-all">
+                          <Eye size={14} />
+                        </button>
+                      )}
+                      <Link href={`/admin/blog/${post.id}`}
+                        className="p-1.5 text-gray-500 hover:text-brand-orange hover:bg-brand-orange/10 rounded-lg transition-all">
+                        <Edit size={14} />
+                      </Link>
+                      <button onClick={() => handleDelete(post)} disabled={deletePost.isPending}
+                        className="p-1.5 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all">
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </td>
+                </motion.tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }

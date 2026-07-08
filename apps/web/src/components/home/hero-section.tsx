@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Play, Star, Users, Award, ArrowRight, Sparkles, ChevronDown } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { usePlatformStats } from '@/hooks/use-queries';
 
 const floatingBadges = [
   { icon: '🤖', label: 'AI & ML',        delay: 0,    x: '-left-4',  y: 'top-20',    rotate: '-6deg' },
@@ -18,6 +19,7 @@ const suggestions = ['AI for Beginners', 'Python Hindi', 'Data Science', 'Machin
 export function HeroSection() {
   const canvasRef  = useRef<HTMLCanvasElement>(null);
   const router     = useRouter();
+  const { data: stats } = usePlatformStats();
   const [query, setQuery]       = useState('');
   const [focused, setFocused]   = useState(false);
   const [filtered, setFiltered] = useState<string[]>([]);
@@ -226,8 +228,8 @@ export function HeroSection() {
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.9 }}
           className="flex flex-wrap items-center justify-center gap-4">
           {[
-            { icon: <Users size={14} />,  text: '10,000+ Students' },
-            { icon: <Star  size={14} />,  text: '4.8/5 Rating' },
+            { icon: <Users size={14} />,  text: (stats as any)?.totalStudents > 0 ? `${(stats as any).totalStudents.toLocaleString('en-IN')}+ Students` : 'Now Enrolling' },
+            ...((stats as any)?.avgRating != null ? [{ icon: <Star size={14} />, text: `${(stats as any).avgRating.toFixed(1)}/5 Rating` }] : []),
             { icon: <Award size={14} />,  text: 'Verifiable Certificate' },
           ].map((item, i) => (
             <div key={i} className="flex items-center gap-1.5 glass rounded-full px-4 py-2 text-white/80 text-sm">

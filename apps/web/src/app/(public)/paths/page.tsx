@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { Navbar } from '@/components/layout/navbar';
 import { Footer } from '@/components/layout/footer';
@@ -38,7 +39,13 @@ export default function PathsPage() {
                     <div className="bg-white rounded-2xl shadow-card hover:shadow-card-hover transition-all duration-300 overflow-hidden border border-gray-100 hover:-translate-y-1">
                       <div className={`h-2 bg-gradient-to-r ${COLORS[path.slug]??'from-brand-blue to-purple-600'}`}/>
                       <div className="p-6">
-                        <div className="text-4xl mb-4">{EMOJI[path.slug]??'🎯'}</div>
+                        {path.iconUrl ? (
+                          <div className="relative w-12 h-12 mb-4 rounded-xl overflow-hidden">
+                            <Image src={path.iconUrl} alt={path.title} fill className="object-cover" />
+                          </div>
+                        ) : (
+                          <div className="text-4xl mb-4">{EMOJI[path.slug]??'🎯'}</div>
+                        )}
                         <h2 className="font-heading font-bold text-gray-900 text-xl mb-2 group-hover:text-brand-orange transition-colors">{path.title}</h2>
                         <p className="text-gray-500 text-sm mb-4">{path.description}</p>
                         <div className="flex flex-wrap gap-3 mb-4">

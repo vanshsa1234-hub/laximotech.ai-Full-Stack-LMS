@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Param, Query, Body, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Param, Query, Body, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { BlogService }   from './blog.service';
 import { Public }        from '../auth/decorators/public.decorator';
@@ -17,9 +17,18 @@ export class BlogController {
   @Get()
   findAll(@Query() query: Record<string, string>) { return this.blog.findAll(query); }
 
-  @Public()
-  @Get(':slug')
-  findOne(@Param('slug') slug: string) { return this.blog.findBySlug(slug); }
+  // ── Admin ────────────────────────────────────────────────
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @Get('admin/all')
+  findAllAdmin(@Query() query: Record<string, string>) { return this.blog.findAllAdmin(query); }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @Get('admin/:id')
+  findByIdAdmin(@Param('id') id: string) { return this.blog.findById(id); }
 
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -36,6 +45,24 @@ export class BlogController {
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN)
+  @Patch(':id/unpublish')
+  unpublish(@Param('id') id: string) { return this.blog.unpublish(id); }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
   @Patch(':id')
   update(@Param('id') id: string, @Body() body: any) { return this.blog.update(id, body); }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @Delete(':id')
+  remove(@Param('id') id: string) { return this.blog.remove(id); }
+
+  // Public slug lookup MUST be last - otherwise it would swallow
+  // single-segment routes like GET /blog/:id above it.
+  @Public()
+  @Get(':slug')
+  findOne(@Param('slug') slug: string) { return this.blog.findBySlug(slug); }
 }

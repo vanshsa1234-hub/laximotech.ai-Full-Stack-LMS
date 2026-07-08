@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import Image from 'next/image';
 import { Navbar } from '@/components/layout/navbar';
 import { Footer } from '@/components/layout/footer';
 import { EnrollButton } from '@/components/payment/enroll-button';
@@ -46,7 +47,8 @@ export default function CourseDetailPage({ params }: { params: { slug: string } 
 
   if (!course) return null;
 
-  const avgRating = (course as any).avgRating ?? 4.8;
+  const avgRating = (course as any).avgRating as number | null;
+  const reviewCount = (course as any)._count?.reviews ?? 0;
   const firstLessonId = ((course as any).sections ?? []).flatMap((section: any) => section.lessons ?? []).find((lesson: any) => lesson?.id)?.id ?? '';
   const continueHref = firstLessonId ? `/learn/${course.slug}/${firstLessonId}` : `/courses/${course.slug}`;
 
@@ -67,11 +69,17 @@ export default function CourseDetailPage({ params }: { params: { slug: string } 
                   <p className="text-white/75 text-base mb-6 leading-relaxed">{course.description}</p>
 
                   <div className="flex flex-wrap items-center gap-4 text-white/70 text-sm mb-6">
-                    <div className="flex items-center gap-1">
-                      {[1,2,3,4,5].map(s => <Star key={s} size={14} className="fill-yellow-400 text-yellow-400" />)}
-                      <span className="text-white ml-1 font-semibold">{avgRating.toFixed(1)}</span>
-                      <span>({(course as any)._count?.reviews ?? 0} reviews)</span>
-                    </div>
+                    {avgRating != null && reviewCount > 0 ? (
+                      <div className="flex items-center gap-1">
+                        {[1,2,3,4,5].map(s => (
+                          <Star key={s} size={14} className={avgRating >= s ? 'fill-yellow-400 text-yellow-400' : 'fill-white/20 text-white/20'} />
+                        ))}
+                        <span className="text-white ml-1 font-semibold">{avgRating.toFixed(1)}</span>
+                        <span>({reviewCount} reviews)</span>
+                      </div>
+                    ) : (
+                      <span className="text-white/60">No ratings yet</span>
+                    )}
                     <span className="flex items-center gap-1"><Users size={14} /> {((course as any)._count?.enrollments ?? 0).toLocaleString('en-IN')} students</span>
                     <span className="flex items-center gap-1"><Globe size={14} /> {course.language}</span>
                     <span className="flex items-center gap-1"><Clock size={14} /> {course.durationHrs}h</span>
@@ -91,14 +99,17 @@ export default function CourseDetailPage({ params }: { params: { slug: string } 
               <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }}
                 className="hidden lg:block bg-white rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.15)] p-6 sticky top-24">
                 <div className="relative h-44 bg-gradient-to-br from-brand-blue/10 to-brand-orange/10 rounded-xl overflow-hidden mb-5 flex items-center justify-center">
-                  <div className="text-6xl">🤖</div>
+                  {course.thumbnailUrl ? (
+                    <Image src={course.thumbnailUrl} alt={course.title} fill className="object-cover" />
+                  ) : (
+                    <div className="text-6xl">{{ AI_ML: '🤖', DATA_SCIENCE: '📊', PROGRAMMING: '💻', ROBOTICS_IOT: '🤖', CYBERSECURITY_CLOUD: '🔒' }[course.category] ?? '📚'}</div>
+                  )}
                 </div>
                 <div className="flex items-end gap-2 mb-1">
                   <span className="font-heading font-bold text-4xl text-brand-blue">Rs {course.price}</span>
-                  <span className="text-gray-400 line-through text-lg mb-1">Rs 4,999</span>
-                  <span className="text-brand-green text-sm font-bold mb-1">92% off</span>
+                  <span className="text-gray-500 text-sm mb-1">one-time payment</span>
                 </div>
-                <p className="text-red-500 text-xs mb-4 font-semibold animate-pulse">⏰ Limited time offer!</p>
+                <p className="text-gray-400 text-xs mb-4">Lifetime access · No hidden fees</p>
 
                 {isEnrolled ? (
                   <a href={continueHref}
@@ -110,7 +121,7 @@ export default function CourseDetailPage({ params }: { params: { slug: string } 
                 )}
 
                 <div className="mt-4 space-y-2">
-                  {[[Infinity,'Lifetime access'],[Smartphone,'Mobile + Desktop'],[Award,'Certificate'],[Check,'30-day refund']].map(([Icon, text], i) => (
+                  {[[Infinity,'Lifetime access'],[Smartphone,'Mobile + Desktop'],[Award,'Certificate']].map(([Icon, text], i) => (
                     <div key={i} className="flex items-center gap-2 text-gray-500 text-xs">
                       <span className="text-brand-green">✓</span> {text as string}
                     </div>
@@ -175,7 +186,7 @@ export default function CourseDetailPage({ params }: { params: { slug: string } 
         <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 p-4 z-50 flex items-center justify-between gap-4">
           <div>
             <div className="font-heading font-bold text-brand-blue text-2xl">Rs {course.price}</div>
-            <div className="text-xs text-gray-400 line-through">Rs 4,999</div>
+            <div className="text-xs text-gray-400">one-time payment</div>
           </div>
           {isEnrolled
             ? <a href={continueHref} className="flex-1 btn-primary justify-center py-3">Continue Learning</a>

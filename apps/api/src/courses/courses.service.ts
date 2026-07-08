@@ -43,11 +43,11 @@ export class CoursesService {
       this.prisma.course.count({ where }),
     ]);
 
-    // Attach average rating
+    // Attach real average rating — null (not a fabricated number) when a course has zero reviews.
     const withRatings = await Promise.all(
       courses.map(async (c) => {
         const avg = await this.prisma.review.aggregate({ where: { courseId: c.id }, _avg: { rating: true } });
-        return { ...c, avgRating: avg._avg.rating ?? 4.8 };
+        return { ...c, avgRating: avg._avg.rating };
       }),
     );
 
@@ -86,7 +86,8 @@ export class CoursesService {
         },
         reviews: {
           orderBy: { createdAt: 'desc' }, take: 6,
-          select: { rating: true, comment: true, createdAt: true, userId: true },
+          select: { rating: true, comment: true, createdAt: true, userId: true,
+            user: { select: { name: true, image: true } } },
         },
       },
     });
@@ -94,7 +95,7 @@ export class CoursesService {
     if (!course) throw new NotFoundException(`Course "${slug}" not found.`);
 
     const avg = await this.prisma.review.aggregate({ where: { courseId: course.id }, _avg: { rating: true } });
-    return { ...course, avgRating: avg._avg.rating ?? 4.8 };
+    return { ...course, avgRating: avg._avg.rating };
   }
 
   async findById(id: string) {
@@ -107,7 +108,9 @@ export class CoursesService {
     const course = await this.prisma.course.findUnique({
       where: { id: courseId },
       select: {
-        id: true, slug: true, title: true, isPublished: true,
+        id: true, slug: true, title: true, isPublished: true, thumbnailUrl: true,
+        instructorId: true,
+        instructor: { select: { id: true, name: true, email: true, image: true, bio: true } },
         sections: {
           orderBy: { order: 'asc' },
           select: {
@@ -222,7 +225,7 @@ export class CoursesService {
 
   // Admin: create course
   async create(data: { slug: string; title: string; description: string; shortDesc: string;
-    price: number; level: string; category: string; language: string;
+    price: number; level: string; category: string; language: string; thumbnailUrl?: string;
     durationHrs: number; instructorId: string; metaTitle?: string; metaDesc?: string; }) {
     return this.prisma.course.create({ data: data as any, select: this.courseSelect });
   }
@@ -230,7 +233,7 @@ export class CoursesService {
   // Admin: update
   async update(id: string, data: Partial<{ title: string; description: string; shortDesc: string;
     price: number; isPublished: boolean; isFeatured: boolean; thumbnailUrl: string; previewVideo: string;
-    metaTitle: string; metaDesc: string; }>) {
+    metaTitle: string; metaDesc: string; instructorId: string; }>) {
     return this.prisma.course.update({ where: { id }, data, select: this.courseSelect });
   }
 

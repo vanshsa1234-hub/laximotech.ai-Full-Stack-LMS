@@ -8,16 +8,19 @@ import { useSession } from 'next-auth/react';
 interface Message { role: 'user' | 'assistant'; content: string; }
 
 interface Props {
-  courseId:  string;
+  courseId?:  string; // absent = public homepage assistant, no login required
   lessonId?: string;
   courseName?: string;
 }
 
 export function AiStudyBuddy({ courseId, lessonId, courseName }: Props) {
   const { data: session } = useSession();
+  const isPublic = !courseId;
   const [open,      setOpen]      = useState(false);
   const [messages,  setMessages]  = useState<Message[]>([
-    { role: 'assistant', content: `Namaste! 👋 Main hoon aapka AI Study Buddy. ${courseName ? `"${courseName}"` : 'Is course'} ke baare mein koi bhi sawaal poochho — Hindi ya English mein!` },
+    { role: 'assistant', content: isPublic
+        ? 'Namaste! 👋 Main hoon laximotech.ai ka AI Assistant. Courses, pricing, career paths — kuch bhi pooch sakte ho, login ki zaroorat nahi!'
+        : `Namaste! 👋 Main hoon aapka AI Study Buddy. ${courseName ? `"${courseName}"` : 'Is course'} ke baare mein koi bhi sawaal poochho — Hindi ya English mein!` },
   ]);
   const [input,     setInput]     = useState('');
   const [streaming, setStreaming] = useState(false);
@@ -34,7 +37,8 @@ export function AiStudyBuddy({ courseId, lessonId, courseName }: Props) {
   }, [open, minimized]);
 
   const send = async () => {
-    if (!input.trim() || streaming || !session) return;
+    if (!input.trim() || streaming) return;
+    if (!isPublic && !session) return; // course-specific mode still requires login
     const userMsg = input.trim();
     setInput('');
     setMessages(prev => [...prev, { role: 'user', content: userMsg }]);
@@ -42,18 +46,25 @@ export function AiStudyBuddy({ courseId, lessonId, courseName }: Props) {
 
     const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
     const token  = localStorage.getItem('lxt_token') ?? '';
+    const endpoint = isPublic ? '/api/v1/ai/public-chat' : '/api/v1/ai/chat';
 
     try {
-      const res = await fetch(`${apiUrl}/api/v1/ai/chat`, {
+      const res = await fetch(`${apiUrl}${endpoint}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(!isPublic && { Authorization: `Bearer ${token}` }),
+        },
         body: JSON.stringify({
-          courseId, lessonId,
+          ...(!isPublic && { courseId, lessonId }),
           messages: [...messages, { role: 'user', content: userMsg }].slice(-10),
         }),
       });
 
-      if (!res.ok || !res.body) throw new Error('Stream failed');
+      if (!res.ok || !res.body) {
+        const errBody = await res.json().catch(() => null);
+        throw new Error(errBody?.message ?? 'Stream failed');
+      }
 
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
@@ -68,6 +79,7 @@ export function AiStudyBuddy({ courseId, lessonId, courseName }: Props) {
         for (const line of lines) {
           try {
             const data = JSON.parse(line.slice(6));
+            if (data.error) throw new Error(data.error);
             if (data.delta) {
               assistantMsg += data.delta;
               setMessages(prev => {
@@ -79,10 +91,16 @@ export function AiStudyBuddy({ courseId, lessonId, courseName }: Props) {
           } catch {}
         }
       }
-    } catch {
-      // Fallback for demo / when API not running
-      const demoReply = `Main samajh gaya! "${userMsg}" ek bahut achha sawaal hai. Is concept ko detail mein explain karne ke liye: yeh course ke ${courseName ?? 'current'} section se directly related hai. Kya aap chahte hain ki main step-by-step explain karun?`;
-      setMessages(prev => [...prev, { role: 'assistant', content: demoReply }]);
+    } catch (err: any) {
+      // Honest failure message — no fabricated "AI" reply pretending to
+      // have answered when the request actually failed.
+      setMessages(prev => {
+        const updated = [...prev];
+        const last = updated[updated.length - 1];
+        const errMsg = { role: 'assistant' as const, content: "Sorry, I couldn't reach the AI service just now. Please try again in a moment." };
+        if (last?.role === 'assistant' && !last.content) { updated[updated.length - 1] = errMsg; return updated; }
+        return [...updated, errMsg];
+      });
     } finally {
       setStreaming(false);
     }
@@ -173,7 +191,7 @@ export function AiStudyBuddy({ courseId, lessonId, courseName }: Props) {
 
                   {/* Input */}
                   <div className="px-3 py-3 border-t border-gray-100 flex-shrink-0">
-                    {!session && (
+                    {!isPublic && !session && (
                       <p className="text-xs text-gray-400 text-center mb-2">
                         Please <a href="/auth" className="text-brand-orange font-semibold">log in</a> to use AI Study Buddy
                       </p>
@@ -184,18 +202,18 @@ export function AiStudyBuddy({ courseId, lessonId, courseName }: Props) {
                         value={input}
                         onChange={e => setInput(e.target.value)}
                         onKeyDown={e => e.key === 'Enter' && !e.shiftKey && send()}
-                        disabled={streaming || !session}
-                        placeholder={session ? 'Apna sawaal likhein...' : 'Login required'}
+                        disabled={streaming || (!isPublic && !session)}
+                        placeholder={isPublic || session ? 'Apna sawaal likhein...' : 'Login required'}
                         className="flex-1 bg-transparent text-sm outline-none text-gray-800 placeholder:text-gray-400 disabled:opacity-50"
                       />
                       <motion.button whileTap={{ scale: 0.9 }}
-                        onClick={send} disabled={streaming || !input.trim() || !session}
+                        onClick={send} disabled={streaming || !input.trim() || (!isPublic && !session)}
                         className="w-7 h-7 rounded-lg bg-brand-orange flex items-center justify-center disabled:opacity-40 transition-opacity flex-shrink-0">
                         <Send size={12} className="text-white" />
                       </motion.button>
                     </div>
                     <p className="text-[10px] text-gray-400 text-center mt-1.5">
-                      20 messages/day free · Powered by OpenAI
+                      {isPublic ? 'Free to use · Powered by Gemini' : '20 messages/day free · Powered by Gemini'}
                     </p>
                   </div>
                 </>

@@ -46,7 +46,7 @@ export interface Course {
     enrollments: number;
     reviews:     number;
   };
-  avgRating?:   number;
+  avgRating?:   number | null;
   createdAt:    string;
 }
 

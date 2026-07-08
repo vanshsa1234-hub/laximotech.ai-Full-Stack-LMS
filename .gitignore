@@ -7,6 +7,9 @@ node_modules
 dist
 build
 
+# Locally-stored uploads (thumbnails, blog covers, etc.) — runtime content, not source
+apps/api/uploads
+
 # Environment — NEVER commit these
 .env
 .env.local

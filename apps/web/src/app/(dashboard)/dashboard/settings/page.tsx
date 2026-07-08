@@ -1,17 +1,58 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { signOut } from 'next-auth/react';
-import { Settings, Bell, Globe, Shield, LogOut, Trash2, ChevronRight, KeyRound, Loader2 } from 'lucide-react';
-import { authApi } from '@/lib/api';
+import { useQueryClient } from '@tanstack/react-query';
+import { Settings, Bell, Globe, Shield, LogOut, Trash2, ChevronRight, KeyRound, Loader2, Check } from 'lucide-react';
+import { authApi, usersApi } from '@/lib/api';
+import { useProfile } from '@/hooks/use-queries';
 import toast from 'react-hot-toast';
 
+const DEFAULT_PREFS = { notifications: { email: true, streak: true, weekly: false }, language: 'hi' as 'hi' | 'en' };
+
 export default function SettingsPage() {
-  const [notifs, setNotifs] = useState({ email: true, streak: true, weekly: false });
-  const [lang,   setLang]   = useState<'hi'|'en'>('hi');
+  const queryClient = useQueryClient();
+  const { data: profile, isLoading: profileLoading } = useProfile();
+
+  const [notifs, setNotifs] = useState(DEFAULT_PREFS.notifications);
+  const [lang,   setLang]   = useState<'hi'|'en'>(DEFAULT_PREFS.language);
+  const [savingPrefs, setSavingPrefs] = useState(false);
   const [pwd, setPwd]       = useState({ current: '', newPwd: '', confirm: '' });
   const [pwdLoading, setPwdLoading] = useState(false);
+
+  // Load the real saved preferences once the profile has loaded — previously
+  // these always started from hardcoded defaults and silently forgot
+  // whatever you toggled the moment you left the page.
+  useEffect(() => {
+    if (profile?.preferences) {
+      setNotifs({ ...DEFAULT_PREFS.notifications, ...(profile.preferences.notifications ?? {}) });
+      setLang(profile.preferences.language ?? DEFAULT_PREFS.language);
+    }
+  }, [profile]);
+
+  const savePreferences = async (nextNotifs: typeof notifs, nextLang: typeof lang) => {
+    setSavingPrefs(true);
+    try {
+      await usersApi.update({ preferences: { notifications: nextNotifs, language: nextLang } });
+      queryClient.invalidateQueries({ queryKey: ['my-profile'] });
+    } catch {
+      toast.error('Failed to save preference.');
+    } finally {
+      setSavingPrefs(false);
+    }
+  };
+
+  const toggleNotif = (key: keyof typeof notifs) => {
+    const next = { ...notifs, [key]: !notifs[key] };
+    setNotifs(next);
+    savePreferences(next, lang);
+  };
+
+  const changeLang = (code: 'hi' | 'en') => {
+    setLang(code);
+    savePreferences(notifs, code);
+  };
 
   const handleChangePwd = async () => {
     if (!pwd.current || !pwd.newPwd) return toast.error('Fill in all password fields');
@@ -39,9 +80,12 @@ export default function SettingsPage() {
         {/* Notifications */}
         <motion.div initial={{opacity:0,y:20}} animate={{opacity:1,y:0}}
           className="bg-white rounded-2xl shadow-card border border-gray-100 mb-4 overflow-hidden">
-          <div className="px-5 py-4 border-b border-gray-50 flex items-center gap-2">
-            <Bell size={16} className="text-brand-orange"/>
-            <span className="font-semibold text-gray-900 text-sm">Notifications</span>
+          <div className="px-5 py-4 border-b border-gray-50 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <Bell size={16} className="text-brand-orange"/>
+              <span className="font-semibold text-gray-900 text-sm">Notifications</span>
+            </div>
+            {savingPrefs && <Loader2 size={12} className="animate-spin text-gray-400" />}
           </div>
           {[
             {key:'email', label:'Email notifications',   sub:'Course updates and promotions'},
@@ -53,7 +97,7 @@ export default function SettingsPage() {
                 <div className="font-medium text-gray-900 text-sm">{item.label}</div>
                 <div className="text-gray-400 text-xs">{item.sub}</div>
               </div>
-              <button onClick={()=>setNotifs(p=>({...p,[item.key]:!p[item.key as keyof typeof p]}))}
+              <button onClick={()=>toggleNotif(item.key as keyof typeof notifs)}
                 className={`w-11 h-6 rounded-full transition-colors relative flex-shrink-0 ${notifs[item.key as keyof typeof notifs]?'bg-brand-green':'bg-gray-200'}`}>
                 <div className={`w-5 h-5 rounded-full bg-white shadow absolute top-0.5 transition-all ${notifs[item.key as keyof typeof notifs]?'left-5':'left-0.5'}`}/>
               </button>
@@ -70,12 +114,15 @@ export default function SettingsPage() {
           </div>
           <div className="p-5 flex gap-3">
             {([['hi','🇮🇳 Hindi + English'],['en','🇬🇧 English Only']] as const).map(([code,label])=>(
-              <button key={code} onClick={()=>setLang(code)}
+              <button key={code} onClick={()=>changeLang(code)}
                 className={`flex-1 py-3 rounded-xl font-semibold text-sm border transition-all ${lang===code?'bg-brand-blue text-white border-brand-blue':'bg-gray-50 text-gray-600 border-gray-200 hover:border-brand-blue'}`}>
                 {label}
               </button>
             ))}
           </div>
+          <p className="px-5 pb-4 text-xs text-gray-400">
+            Saved to your account for future use — course content itself is currently Hindi + English mixed regardless of this setting.
+          </p>
         </motion.div>
 
         {/* Change Password */}
@@ -119,7 +166,6 @@ export default function SettingsPage() {
           {[
             {label:'Privacy Policy',   href:'/privacy'},
             {label:'Terms of Service', href:'/terms'},
-            {label:'Refund Policy',    href:'/refund'},
           ].map(item=>(
             <a key={item.label} href={item.href}
               className="flex items-center justify-between px-5 py-4 border-b border-gray-50 last:border-0 hover:bg-gray-50 transition-colors">

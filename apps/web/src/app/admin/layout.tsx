@@ -5,13 +5,19 @@ import { usePathname } from 'next/navigation';
 import { motion } from 'framer-motion';
 import {
   LayoutDashboard, BookOpen, Users, ShoppingBag,
-  FileText, Tag, BarChart2, Settings, ExternalLink, Shield
+  FileText, Tag, BarChart2, Settings, ExternalLink, Shield, CalendarCheck, Route, Layers, Mail, GraduationCap, Award
 } from 'lucide-react';
 
 const navItems = [
   { href: '/admin',           icon: LayoutDashboard, label: 'Dashboard' },
   { href: '/admin/courses',   icon: BookOpen,        label: 'Courses' },
+  { href: '/admin/instructors', icon: GraduationCap, label: 'Instructors' },
+  { href: '/admin/career-paths', icon: Route,        label: 'Career Paths' },
   { href: '/admin/students',  icon: Users,           label: 'Students' },
+  { href: '/admin/certificate-template', icon: Award, label: 'Certificate Design' },
+  { href: '/admin/demo-requests', icon: CalendarCheck, label: 'Demo Requests' },
+  { href: '/admin/contact-messages', icon: Mail,      label: 'Contact Messages' },
+  { href: '/admin/site-content', icon: Layers,        label: 'Site Content' },
   { href: '/admin/analytics', icon: BarChart2,       label: 'Analytics' },
   { href: '/admin/blog',      icon: FileText,        label: 'Blog' },
   { href: '/admin/coupons',   icon: Tag,             label: 'Coupons' },

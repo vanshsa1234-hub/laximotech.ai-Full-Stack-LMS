@@ -1,20 +1,34 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { BarChart2, Clock, Zap, Flame, CheckCircle, TrendingUp, Award } from 'lucide-react';
-import { useUserStats, useMyEnrollments } from '@/hooks/use-queries';
-import { formatHours } from '@/lib/utils';
+import { BarChart2, Clock, Zap, Flame, CheckCircle, TrendingUp, Award, Loader2 } from 'lucide-react';
+import { useUserStats, useMyEnrollments, useActivityHeatmap } from '@/hooks/use-queries';
 
 const LEVEL_COLORS = ['bg-gray-100','bg-brand-green/30','bg-brand-green/60','bg-brand-green'];
-const ACTIVITY = Array.from({length:84},(_,i)=>({day:i,active:Math.random()>0.6,level:Math.floor(Math.random()*4)}));
+
+// Map a real completion count for a day to a heatmap intensity level (0-3).
+// Returns an index directly into LEVEL_COLORS (0 = no activity) — previously
+// this returned -1 and callers did LEVEL_COLORS[level+1], which read
+// LEVEL_COLORS[4] (out of bounds, undefined) for the highest activity level.
+function levelFor(count: number) {
+  if (count <= 0) return 0;
+  if (count === 1) return 1;
+  if (count === 2) return 2;
+  return 3; // 3+ lessons in a day
+}
 
 export default function ProgressPage() {
   const { data: stats,  isLoading: statsLoading }  = useUserStats();
   const { data: enrRes, isLoading: enrLoading }    = useMyEnrollments();
+  const { data: activity, isLoading: activityLoading, isError: activityError, refetch: refetchActivity } = useActivityHeatmap();
   const enrollments = (enrRes as any)?.data ?? enrRes ?? [];
+  const activityDays = (activity as any[]) ?? [];
 
-  const totalHrs    = enrollments.reduce((s:number,e:any)=>(s + (e.course?.durationHrs ?? 0)*(e.progress/100)),0);
-  const totalLessons= enrollments.reduce((s:number,e:any)=>(s + Math.round(((e.course?.totalLessons??0)*(e.progress/100)))),0);
+  // Real numbers from the backend (summed actual watchedSeconds / actual completed
+  // LessonProgress rows) — not estimated from course.durationHrs * progress%,
+  // which could drift from what was actually watched.
+  const totalHrs     = stats?.totalWatchedHrs ?? 0;
+  const totalLessons = stats?.completedLessons ?? 0;
 
   return (
     <main className="min-h-screen bg-brand-ice pt-6 pb-24 md:pb-6 px-4 sm:px-6 lg:px-8">
@@ -73,20 +87,36 @@ export default function ProgressPage() {
             )}
           </motion.div>
 
-          {/* Activity heatmap */}
+          {/* Activity heatmap — real lesson-completion data, not random */}
           <motion.div initial={{opacity:0,y:20}} animate={{opacity:1,y:0}} transition={{delay:0.3}}
             className="bg-white rounded-2xl p-6 shadow-card border border-gray-100">
             <h2 className="font-heading font-semibold text-gray-900 mb-5 flex items-center gap-2">
               <Flame size={18} className="text-brand-orange"/> Activity — Last 12 Weeks
             </h2>
-            <div className="flex gap-1 flex-wrap">
-              {ACTIVITY.map((day,i)=>(
-                <motion.div key={i} initial={{opacity:0,scale:0}} animate={{opacity:1,scale:1}}
-                  transition={{delay:i*0.004}}
-                  className={`w-3 h-3 rounded-sm ${day.active?LEVEL_COLORS[day.level+1]:LEVEL_COLORS[0]}`}
-                  title={`Day ${i+1}: ${day.active?`${day.level+1} lessons`:'No activity'}`}/>
-              ))}
-            </div>
+            {activityLoading ? (
+              <div className="flex justify-center py-8"><Loader2 size={20} className="animate-spin text-gray-300" /></div>
+            ) : activityError ? (
+              <div className="flex flex-col items-center gap-2 py-8 text-center">
+                <p className="text-gray-400 text-sm">Couldn't load your activity right now.</p>
+                <button onClick={() => refetchActivity()} className="text-brand-blue text-sm font-semibold hover:text-brand-orange transition-colors">
+                  Try again
+                </button>
+              </div>
+            ) : activityDays.length === 0 ? (
+              <p className="text-gray-400 text-sm py-8 text-center">No activity recorded yet — complete a lesson to get started.</p>
+            ) : (
+              <div className="flex gap-1 flex-wrap">
+                {activityDays.map((day, i) => {
+                  const level = levelFor(day.count);
+                  return (
+                    <motion.div key={day.date} initial={{opacity:0,scale:0}} animate={{opacity:1,scale:1}}
+                      transition={{delay:i*0.004}}
+                      className={`w-3 h-3 rounded-sm ${LEVEL_COLORS[level]}`}
+                      title={`${day.date}: ${day.count > 0 ? `${day.count} lesson${day.count > 1 ? 's' : ''} completed` : 'No activity'}`}/>
+                  );
+                })}
+              </div>
+            )}
             <div className="flex items-center gap-2 mt-4">
               <span className="text-xs text-gray-400">Less</span>
               {LEVEL_COLORS.map((c,i)=><div key={i} className={`w-3 h-3 rounded-sm ${c}`}/>)}
