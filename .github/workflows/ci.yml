@@ -19,6 +19,18 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx prisma generate --schema=apps/api/prisma/schema.prisma
+      - name: Show Prisma version
+        run: npx prisma -v
+      - name: Check generated Role export
+        run: |
+          grep -n "export const Role" node_modules/.prisma/client/index.d.ts || true
+      - name: Check generated Role type
+        run: |
+          grep -n "export type Role" node_modules/.prisma/client/index.d.ts || true
+      - name: Show runtime exports
+        run: |
+          node -e "const p=require('@prisma/client'); console.log(Object.keys(p).filter(x=>x.includes('Role')||x.includes('Course')||x.includes('Demo')||x.includes('Contact')))"
+
       - run: npm run type-check
       - run: npm run lint
 
