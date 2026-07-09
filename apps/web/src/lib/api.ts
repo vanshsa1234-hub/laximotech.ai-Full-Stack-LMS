@@ -40,7 +40,7 @@ export const coursesApi = {
   builder:   (courseId: string)                 => api.get(`/courses/admin/${courseId}/builder`),
   create: (data: {
     slug: string; title: string; description: string; shortDesc: string;
-    price: number; level: string; category: string; language: string;
+    price: number; level: string; category: string; language: string; thumbnailUrl?: string;
     durationHrs: number; instructorId: string; metaTitle?: string; metaDesc?: string;
   }) => api.post('/courses', data),
   update: (id: string, data: any) => api.patch(`/courses/${id}`, data),

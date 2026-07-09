@@ -102,7 +102,7 @@ export default function CourseDetailPage({ params }: { params: { slug: string } 
                   {course.thumbnailUrl ? (
                     <Image src={course.thumbnailUrl} alt={course.title} fill className="object-cover" />
                   ) : (
-                    <div className="text-6xl">{{ AI_ML: '🤖', DATA_SCIENCE: '📊', PROGRAMMING: '💻', ROBOTICS_IOT: '🤖', CYBERSECURITY_CLOUD: '🔒' }[course.category] ?? '📚'}</div>
+                    <div className="text-6xl">{{ AI_ML: '🤖', DATA_SCIENCE: '📊', PROGRAMMING: '💻', ROBOTICS_IOT: '🤖', CYBERSECURITY_CLOUD: '🔒' }[course.category as 'AI_ML' | 'DATA_SCIENCE' | 'PROGRAMMING' | 'ROBOTICS_IOT' | 'CYBERSECURITY_CLOUD'] ?? '📚'}</div>
                   )}
                 </div>
                 <div className="flex items-end gap-2 mb-1">

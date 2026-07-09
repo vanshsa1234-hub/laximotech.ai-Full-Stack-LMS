@@ -58,7 +58,10 @@
     "typescript": "^5.4.5",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
-    "@types/bcryptjs": "^2.4.6"
+    "@types/bcryptjs": "^2.4.6",
+    "eslint": "^8.57.0",
+    "@typescript-eslint/eslint-plugin": "^7.13.0",
+    "@typescript-eslint/parser": "^7.13.0"
   },
   "prisma": {
     "seed": "ts-node -e \"require('./prisma/seed.ts')\""

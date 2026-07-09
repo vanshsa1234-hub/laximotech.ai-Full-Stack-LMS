@@ -36,6 +36,10 @@ export default function NewCoursePage() {
       toast.error('Please fill in title, short description, and full description.');
       return;
     }
+    if (!form.instructorId) {
+      toast.error('Please select an instructor — every course needs one.');
+      return;
+    }
     setSaving(true);
     try {
       await coursesApi.create({
@@ -48,8 +52,8 @@ export default function NewCoursePage() {
         category:    form.category,
         language:    form.language,
         durationHrs: Number(form.durationHrs),
+        instructorId: form.instructorId,
         ...(form.thumbnailUrl && { thumbnailUrl: form.thumbnailUrl }),
-        ...(form.instructorId && { instructorId: form.instructorId }),
       });
       toast.success('Course created! Open Builder to add sections, lessons, videos, and quizzes.');
       router.push('/admin/courses');

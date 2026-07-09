@@ -4,6 +4,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import * as crypto from 'crypto';
 
 // CommonJS require avoids "default is not a constructor" runtime error
+// eslint-disable-next-line @typescript-eslint/no-var-requires
 const Razorpay = require('razorpay');
 
 @Injectable()

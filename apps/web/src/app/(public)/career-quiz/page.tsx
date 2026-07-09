@@ -8,6 +8,12 @@ import { Footer } from '@/components/layout/footer';
 import { ArrowRight, ArrowLeft, Brain, CheckCircle, TrendingUp, Sparkles, Loader2 } from 'lucide-react';
 import { useSiteContent } from '@/hooks/use-queries';
 
+type CareerQuizQuestion = {
+  id: string;
+  question: string;
+  emoji: string;
+  options: { label: string; value: string }[];
+};
 // Fallback used only if the CMS entry hasn't loaded yet / API is unreachable —
 // the admin-edited version from useSiteContent('career-quiz') always takes priority.
 const DEFAULT_QUESTIONS = [
@@ -144,7 +150,7 @@ function getRecommendation(answers: Record<string, string>): Recommendation[] {
 export default function CareerQuizPage() {
   const { data: res, isLoading: contentLoading } = useSiteContent('career-quiz');
   const cmsContent = (res as any)?.data;
-  const QUESTIONS = cmsContent?.questions ?? DEFAULT_QUESTIONS;
+  const QUESTIONS: CareerQuizQuestion[] = cmsContent?.questions ?? DEFAULT_QUESTIONS;
   const heroTitle    = cmsContent?.heroTitle;
   const heroSubtitle = cmsContent?.heroSubtitle;
 
