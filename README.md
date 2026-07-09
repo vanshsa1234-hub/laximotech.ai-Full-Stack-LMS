@@ -16,6 +16,7 @@ npm run dev            # Start frontend (3000) + backend (4000)
 That's it. **No .env setup needed** — both `.env` files ship pre-configured for Docker.
 
 ### First time only — push DB schema + seed data:
+
 ```powershell
 npm run db:push    # Push Prisma schema to Docker PostgreSQL
 npm run db:seed    # Seed 25 courses, admin user, coupons, blog posts
@@ -88,20 +89,21 @@ docker compose down -v     # Stop + delete all data (fresh start)
 ```
 
 Services:
+
 - **PostgreSQL** → localhost:5433 (user: laximotech / pass: laximotech123)
-- **pgAdmin**    → http://localhost:5050 (admin@laximotech.ai / admin123)
+- **pgAdmin** → http://localhost:5050 (admin@laximotech.ai / admin123)
 
 ---
 
 ## 🌐 URLs (development)
 
-| Service       | URL                              |
-|---------------|----------------------------------|
-| Frontend      | http://localhost:3000            |
-| Backend API   | http://localhost:4000            |
-| Swagger Docs  | http://localhost:4000/api/docs   |
-| pgAdmin       | http://localhost:5050            |
-| Prisma Studio | http://localhost:5555 (db:studio)|
+| Service       | URL                               |
+| ------------- | --------------------------------- |
+| Frontend      | http://localhost:3000             |
+| Backend API   | http://localhost:4000             |
+| Swagger Docs  | http://localhost:4000/api/docs    |
+| pgAdmin       | http://localhost:5050             |
+| Prisma Studio | http://localhost:5555 (db:studio) |
 
 ---
 
@@ -109,13 +111,13 @@ Services:
 
 The app runs without any of these — they just enable optional features:
 
-| Variable | Feature | Where to get |
-|---|---|---|
-| `GOOGLE_CLIENT_ID/SECRET` | Google login | console.cloud.google.com |
-| `RESEND_API_KEY` | Magic link email | resend.com (free) |
-| `RAZORPAY_KEY_ID/SECRET` | Payments | dashboard.razorpay.com |
-| `OPENAI_API_KEY` | AI Study Buddy | platform.openai.com |
-| `AWS_*` | Video/file storage | AWS IAM |
+| Variable                  | Feature            | Where to get             |
+| ------------------------- | ------------------ | ------------------------ |
+| `GOOGLE_CLIENT_ID/SECRET` | Google login       | console.cloud.google.com |
+| `RESEND_API_KEY`          | Magic link email   | resend.com (free)        |
+| `RAZORPAY_KEY_ID/SECRET`  | Payments           | dashboard.razorpay.com   |
+| `OPENAI_API_KEY`          | AI Study Buddy     | platform.openai.com      |
+| `AWS_*`                   | Video/file storage | AWS IAM                  |
 
 Add to `apps/api/.env` and `apps/web/.env.local`.
 
@@ -123,27 +125,30 @@ Add to `apps/api/.env` and `apps/web/.env.local`.
 
 ## 👤 Default Users (after seed)
 
-| Role        | Email                       | Password |
-|-------------|-----------------------------| ---------|
-| Admin       | admin@laximotech.ai         | magic link |
-| Instructor  | instructor@laximotech.ai    | magic link |
-| Demo Student| demo@laximotech.ai          | magic link |
+| Role         | Email                    | Password   |
+| ------------ | ------------------------ | ---------- |
+| Admin        | admin@laximotech.ai      | magic link |
+| Instructor   | instructor@laximotech.ai | magic link |
+| Demo Student | demo@laximotech.ai       | magic link |
 
 ---
 
 ## 📦 What's Built
 
 ### Phase 0 — Foundation
+
 ✅ Turborepo monorepo · Prisma 29-model schema · NestJS JWT auth
 ✅ Docker Compose · Design system · PWA manifest · Deployment configs
 
 ### Phase 1 — MVP
+
 ✅ Homepage (12 sections) · /courses listing + filters · Course detail page
 ✅ Video player (speed/seek/bookmark/fullscreen) · Razorpay payment
 ✅ Student dashboard · My courses · Certificates page · Auth page
 ✅ NestJS: Courses · Orders · Enrollments · Lessons · Progress · Users APIs
 
 ### Phase 2 — Full LMS
+
 ✅ Quiz engine (timer, spaced repetition, explanations, XP rewards)
 ✅ Certificate PDF generation (Puppeteer) + public verify page
 ✅ AI Study Buddy (OpenAI SSE streaming + context injection)
@@ -161,6 +166,7 @@ Add to `apps/api/.env` and `apps/web/.env.local`.
 ## 🚀 Production Deployment
 
 ### Frontend → Vercel
+
 ```
 Root: apps/web
 Build: next build
@@ -169,6 +175,7 @@ Env: copy apps/web/.env.local → Vercel environment variables
 ```
 
 ### Backend → Railway
+
 ```
 Root: apps/api
 Start: npm run start
@@ -178,7 +185,7 @@ Env: copy apps/api/.env → Railway environment variables
 
 ---
 
-*Built with ❤️ in Greater Noida West, India 🇮🇳*
+_Built with ❤️ in Greater Noida West, India 🇮🇳_
 
 ---
 
@@ -187,6 +194,7 @@ Env: copy apps/api/.env → Railway environment variables
 This section documents exactly what is real vs. what still needs your input.
 
 ### ✅ Fully real, working end-to-end
+
 - Auth: Google OAuth, magic link, and email+password ALL create the same kind of session (NextAuth JWT strategy). One login system, no fake tokens.
 - `/dashboard` and all sub-pages pull real data from Postgres via NestJS — no hardcoded names, no fake XP.
 - Quizzes: seeded with real `Quiz` + `QuizQuestion` rows per course section. Submitting grades against real correct answers, awards real XP, issues a real certificate on final exam pass.
@@ -195,18 +203,21 @@ This section documents exactly what is real vs. what still needs your input.
 - Admin dashboard/students: real Postgres queries, zero mock arrays.
 
 ### 🟡 Honest in-progress state
+
 - **Payments**: Razorpay is NOT configured. `EnrollButton` detects this and enrolls the user directly for free instead of pretending to charge them — no fake "payment successful" screen. Add `RAZORPAY_KEY_ID`/`SECRET` to `apps/api/.env` to switch on real payments.
 - **AI Study Buddy**: requires `OPENAI_API_KEY` in `apps/api/.env`. Add your key and it streams real responses; without it, the panel shows a clear "not configured" state rather than a fake canned reply.
 - **Video hosting**: no S3 wired up. The player works with any direct video URL — update `Lesson.videoUrl` per lesson via Prisma Studio (`npm run db:studio`) with your own hosted files.
 
 ### How to swap in your real video
+
 ```sql
 -- via Prisma Studio (npm run db:studio), open the Lesson table and edit videoUrl,
 -- or run a quick script:
 ```
+
 ```ts
 await prisma.lesson.update({
   where: { id: 'lesson-id-here' },
-  data:  { videoUrl: 'https://your-cdn.com/real-video.mp4', videoDurationSec: 1200 },
+  data: { videoUrl: 'https://your-cdn.com/real-video.mp4', videoDurationSec: 1200 },
 });
 ```

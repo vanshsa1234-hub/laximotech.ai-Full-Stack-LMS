@@ -36,7 +36,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         email:    { label: 'Email',    type: 'email' },
         password: { label: 'Password', type: 'password' },
       },
-      async authorize(credentials) {
+      async authorize(credentials, request) {
         if (!credentials?.email || !credentials?.password) return null;
 
         const user = await prisma.user.findUnique({
@@ -57,6 +57,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           name:  user.name,
           email: user.email,
           image: user.image,
+          role:  user.role,
         };
       },
     }),
@@ -73,10 +74,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     // Runs on sign-in and every subsequent token refresh
     async jwt({ token, user, trigger }) {
       if (user) {
-        token.id = user.id;
-        const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
-        token.role = dbUser?.role ?? 'STUDENT';
-      }
+  token.id = user.id;
+  token.role = user.role;
+}
       // Keep role fresh on every request without an extra DB call most of the time
       if (trigger === 'update' && token.id) {
         const dbUser = await prisma.user.findUnique({ where: { id: token.id as string } });
@@ -89,7 +89,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async session({ session, token }) {
       if (session.user) {
         session.user.id   = token.id as string;
-        // @ts-ignore
         session.user.role = token.role as string;
       }
       return session;
