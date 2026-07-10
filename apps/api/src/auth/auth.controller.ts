@@ -24,13 +24,6 @@ export class AuthController {
     return this.auth.login(body);
   }
 
-  /** Sync OAuth session → NestJS JWT (called by Next.js after Auth.js login) */
-  @Public()
-  @Post('sync')
-  sync(@Body() body: { email: string; name?: string; image?: string; provider: string; providerAccountId: string }) {
-    return this.auth.syncUser(body);
-  }
-
   /** Forgot password — sends reset link */
   @Public()
   @Post('forgot-password')

@@ -48,16 +48,6 @@ export class AuthService {
     return { user: this.sanitizeUser(user), token, message: 'Login successful!' };
   }
 
-  async syncUser(data: { email: string; name?: string; image?: string; provider: string; providerAccountId: string }) {
-    const user = await this.prisma.user.upsert({
-      where:  { email: data.email },
-      update: { name: data.name, image: data.image, lastActiveAt: new Date() },
-      create: { email: data.email, name: data.name, image: data.image, emailVerified: new Date() },
-    });
-    const token = this.generateToken(user.id, user.email, user.role);
-    return { user: this.sanitizeUser(user), token };
-  }
-
   async forgotPassword(email: string) {
     const user = await this.prisma.user.findUnique({ where: { email } });
     if (!user) return { message: 'If that email exists, a reset link has been sent.' };

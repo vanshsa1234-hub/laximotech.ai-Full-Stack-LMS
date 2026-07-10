@@ -35,8 +35,13 @@ export class CommentsService {
   }
 
   async createComment(userId: string, data: { lessonId?: string; courseId?: string; body: string; parentId?: string }) {
+    const { lessonId, courseId, body, parentId } = data;
     return this.prisma.comment.create({
-      data: { userId, ...data, type: data.parentId ? 'LESSON' : (data.lessonId ? 'LESSON' : 'COURSE') },
+      data: {
+        lessonId, courseId, body, parentId,
+        type: parentId ? 'LESSON' : (lessonId ? 'LESSON' : 'COURSE'),
+        userId,
+      },
       select: this.commentSelect,
     });
   }

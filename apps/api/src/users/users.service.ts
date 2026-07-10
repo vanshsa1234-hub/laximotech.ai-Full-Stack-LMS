@@ -69,9 +69,10 @@ export class UsersService {
     name?: string; bio?: string; city?: string; linkedinUrl?: string; phone?: string; weeklyGoal?: number;
     preferences?: any;
   }) {
+    const { name, bio, city, linkedinUrl, phone, weeklyGoal, preferences } = data;
     return this.prisma.user.update({
       where: { id: userId },
-      data,
+      data: { name, bio, city, linkedinUrl, phone, weeklyGoal, preferences },
       select: { id: true, name: true, bio: true, city: true, linkedinUrl: true, phone: true, weeklyGoal: true, preferences: true },
     });
   }

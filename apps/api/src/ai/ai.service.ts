@@ -1,4 +1,4 @@
-import { Injectable, ForbiddenException } from '@nestjs/common';
+import { Injectable, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { Response }      from 'express';
@@ -82,27 +82,40 @@ export class AiService {
     messages: ChatMessage[],
     res:      Response,
   ) {
-    // Rate limit: 20 messages/day
+    // Rate limit: 20 messages/day per course, 50/day globally
     const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
-    const msgCount = await this.prisma.aiChatMessage.count({
-      where: { userId, courseId, createdAt: { gte: todayStart } },
-    });
+    const [msgCount, globalCount] = await Promise.all([
+      this.prisma.aiChatMessage.count({ where: { userId, courseId, createdAt: { gte: todayStart } } }),
+      this.prisma.aiChatMessage.count({ where: { userId, createdAt: { gte: todayStart } } }),
+    ]);
     if (msgCount >= 20) {
       throw new ForbiddenException('Daily limit of 20 AI messages reached. Upgrade for unlimited access.');
+    }
+    if (globalCount >= 50) {
+      throw new ForbiddenException('Daily limit of 50 AI messages reached across all courses.');
     }
 
     const course = await this.prisma.course.findUnique({
       where:  { id: courseId },
       select: { title: true, description: true, category: true },
     });
+    if (!course) throw new NotFoundException('Course not found.');
 
     let lessonContext = '';
     if (lessonId) {
       const lesson = await this.prisma.lesson.findUnique({
         where:  { id: lessonId },
-        select: { title: true, textContent: true, section: { select: { title: true } } },
+        select: { title: true, textContent: true, isPreview: true, section: { select: { title: true } } },
       });
       if (lesson) {
+        // Non-preview lessons require enrollment — otherwise anyone could
+        // extract paid lesson content via the AI chat context.
+        if (!lesson.isPreview) {
+          const enrollment = await this.prisma.enrollment.findUnique({
+            where: { userId_courseId: { userId, courseId } },
+          });
+          if (!enrollment) throw new ForbiddenException('Please enroll in this course to use the AI Study Buddy here.');
+        }
         lessonContext = `\nCurrent lesson: "${lesson.title}" in section "${lesson.section.title}"`;
         if (lesson.textContent) lessonContext += `\nLesson notes: ${lesson.textContent.slice(0, 800)}`;
       }
