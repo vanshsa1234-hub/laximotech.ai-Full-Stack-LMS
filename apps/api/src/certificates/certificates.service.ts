@@ -114,6 +114,31 @@ export class CertificatesService {
     }
   }
 
+  // Admin: re-render every issued certificate's PDF using whatever template
+  // is currently saved. Needed because a certificate's PDF is normally only
+  // generated once, at the moment it's issued — without this, saving a new
+  // design in /admin/certificate-template has no effect on certificates that
+  // were already issued before the design existed.
+  async regenerateAllCertificates() {
+    const certs = await this.prisma.certificate.findMany({
+      where: { status: 'ISSUED' },
+      select: { id: true },
+    });
+
+    let succeeded = 0;
+    let failed = 0;
+    for (const c of certs) {
+      try {
+        await this.generateCertificatePdf(c.id);
+        succeeded++;
+      } catch (err) {
+        failed++;
+        console.error(`Certificate regeneration failed for ${c.id}:`, err);
+      }
+    }
+    return { total: certs.length, succeeded, failed };
+  }
+
   // Admin: issue certificate manually
   async issueCertificate(userId: string, courseId: string, finalScore?: number) {
     const cert = await this.prisma.certificate.upsert({

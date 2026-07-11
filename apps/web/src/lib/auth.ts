@@ -19,7 +19,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
     GoogleProvider({
       clientId:     process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+    // Safe specifically for Google: it only issues this token for an email
+    // it has already verified ownership of. Without this, NextAuth refuses
+    // to link a Google sign-in to an existing account with the same email
+    // (e.g. one created via email/password) — which is exactly what's
+    // throwing OAuthAccountNotLinked right now.
+    allowDangerousEmailAccountLinking: true,
     }),
 
     ResendProvider({

@@ -12,12 +12,24 @@ function RateCourse({ courseId }: { courseId: string }) {
   const { data: myReview, isLoading } = useMyReview(courseId);
   const upsertReview = useUpsertReview();
   const [hoverRating, setHoverRating] = useState(0);
+  const [selectedRating, setSelectedRating] = useState(0);
   const [comment, setComment] = useState('');
   const [showComment, setShowComment] = useState(false);
 
   const existingRating = (myReview as any)?.rating;
+  const activeRating = selectedRating || existingRating || 0;
 
-  const submit = (rating: number) => {
+  // Clicking a star only picks the rating and opens the comment box —
+  // it does NOT submit. Submission only happens on explicit Save, so the
+  // box no longer closes on its own before the user can type a comment.
+  const pickStar = (s: number) => {
+    setSelectedRating(s);
+    setShowComment(true);
+  };
+
+  const save = () => {
+    const rating = selectedRating || existingRating;
+    if (!rating) return;
     upsertReview.mutate({ courseId, data: { rating, comment: comment.trim() || undefined } }, {
       onSuccess: () => { toast.success('Thanks for rating this course!'); setShowComment(false); },
       onError:   () => toast.error('Failed to submit rating.'),
@@ -32,10 +44,10 @@ function RateCourse({ courseId }: { courseId: string }) {
         {[1,2,3,4,5].map(s => (
           <button key={s} type="button"
             onMouseEnter={() => setHoverRating(s)} onMouseLeave={() => setHoverRating(0)}
-            onClick={() => { setShowComment(true); if (!showComment) submit(s); }}
+            onClick={() => pickStar(s)}
             disabled={upsertReview.isPending}>
             <Star size={16} className={
-              (hoverRating || existingRating || 0) >= s ? 'fill-yellow-400 text-yellow-400' : 'fill-gray-200 text-gray-200'
+              (hoverRating || activeRating) >= s ? 'fill-yellow-400 text-yellow-400' : 'fill-gray-200 text-gray-200'
             } />
           </button>
         ))}
@@ -48,9 +60,10 @@ function RateCourse({ courseId }: { courseId: string }) {
         <div className="mt-2 flex gap-2">
           <input value={comment} onChange={e => setComment(e.target.value)}
             placeholder="Add a comment (optional)"
-            className="flex-1 text-xs bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 outline-none focus:border-brand-orange" />
-          <button onClick={() => submit(existingRating || hoverRating || 5)}
-            className="text-xs font-semibold text-brand-blue hover:text-brand-orange transition-colors flex-shrink-0">
+            disabled={upsertReview.isPending}
+            className="flex-1 text-xs bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 outline-none focus:border-brand-orange disabled:opacity-50" />
+          <button onClick={save} disabled={upsertReview.isPending}
+            className="text-xs font-semibold text-brand-blue hover:text-brand-orange transition-colors flex-shrink-0 disabled:opacity-50">
             Save
           </button>
         </div>

@@ -50,4 +50,15 @@ export class CertificatesController {
   generatePdf(@Param('id') id: string) {
     return this.certs.generateCertificatePdf(id);
   }
+
+  // Re-renders every issued certificate's PDF using the current template.
+  // Call this after saving a new design in /admin/certificate-template so
+  // certificates issued before the design existed get updated too.
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @Post('regenerate-all')
+  regenerateAll() {
+    return this.certs.regenerateAllCertificates();
+  }
 }

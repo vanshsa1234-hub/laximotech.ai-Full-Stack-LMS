@@ -98,8 +98,9 @@ export const quizzesApi = {
 
 // ── Certificates ─────────────────────────────────────────────
 export const certificatesApi = {
-  mine:   ()                      => api.get('/certificates/me'),
-  verify: (certificateNo: string) => api.get(`/certificates/verify/${certificateNo}`),
+  mine:          ()  => api.get('/certificates/me'),
+  verify:        (certificateNo: string) => api.get(`/certificates/verify/${certificateNo}`),
+  regenerateAll: ()  => api.post('/certificates/regenerate-all'),
 };
 
 // ── Auth ─────────────────────────────────────────────────────

@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Loader2, Save, RotateCcw, Award } from 'lucide-react';
+import { Loader2, Save, RotateCcw, Award, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { useAdminSiteContent, useUpdateSiteContent, useResetSiteContent } from '@/hooks/use-queries';
+import { useAdminSiteContent, useUpdateSiteContent, useResetSiteContent, useRegenerateCertificates } from '@/hooks/use-queries';
 import { ImageUpload } from '@/components/admin/image-upload';
 
 const SAMPLE = {
@@ -34,6 +34,7 @@ export default function CertificateTemplatePage() {
   const { data: all, isLoading } = useAdminSiteContent();
   const updateContent = useUpdateSiteContent();
   const resetContent  = useResetSiteContent();
+  const regenerate    = useRegenerateCertificates();
 
   const entry = (all as any[])?.find(c => c.key === 'certificate-template');
   const [draft, setDraft] = useState<any>(null);
@@ -57,6 +58,14 @@ export default function CertificateTemplatePage() {
   const handleReset = () => {
     if (!confirm('Reset to the built-in default certificate design? Your custom layout will be lost.')) return;
     resetContent.mutate('certificate-template', { onSuccess: () => toast.success('Reset to default design.') });
+  };
+
+  const handleRegenerate = () => {
+    if (!confirm('Re-render every already-issued certificate with this design? This may take a moment.')) return;
+    regenerate.mutate(undefined, {
+      onSuccess: (res: any) => toast.success(`Updated ${res.succeeded}/${res.total} certificates with the new design.`),
+      onError:   () => toast.error('Failed to regenerate certificates.'),
+    });
   };
 
   if (isLoading || !draft) {
@@ -154,6 +163,19 @@ export default function CertificateTemplatePage() {
                 <RotateCcw size={12} /> Reset
               </button>
             )}
+          </div>
+
+          <div className="pt-1">
+            <button onClick={handleRegenerate} disabled={regenerate.isPending}
+              className="w-full flex items-center justify-center gap-2 bg-gray-800 border border-gray-700 text-white font-semibold py-2.5 rounded-xl text-xs hover:border-brand-orange transition-colors disabled:opacity-60">
+              {regenerate.isPending ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
+              {regenerate.isPending ? 'Regenerating...' : 'Apply Design to Existing Certificates'}
+            </button>
+            <p className="text-[11px] text-gray-500 mt-2 text-center">
+              A certificate's PDF is only generated once, when it's first issued. After saving a new
+              design, use this to re-render every certificate students already earned — otherwise
+              they'll keep the design that was live when they were issued.
+            </p>
           </div>
         </div>
 

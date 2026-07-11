@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, X, Send, Minimize2, Maximize2 } from 'lucide-react';
 import { useSession } from 'next-auth/react';
+import { getAuthToken } from '@/lib/get-token';
 
 interface Message { role: 'user' | 'assistant'; content: string; }
 
@@ -45,7 +46,7 @@ export function AiStudyBuddy({ courseId, lessonId, courseName }: Props) {
     setStreaming(true);
 
     const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
-    const token  = localStorage.getItem('lxt_token') ?? '';
+    const token  = isPublic ? '' : ((await getAuthToken()) ?? '');
     const endpoint = isPublic ? '/api/v1/ai/public-chat' : '/api/v1/ai/chat';
 
     try {

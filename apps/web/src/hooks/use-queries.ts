@@ -121,6 +121,12 @@ export function useVerifyCertificate(certificateNo: string) {
   });
 }
 
+export function useRegenerateCertificates() {
+  return useMutation({
+    mutationFn: () => certificatesApi.regenerateAll().then(r => r.data),
+  });
+}
+
 // ── Blog ──────────────────────────────────────────────────────
 export function useBlogPosts(params?: Record<string, string>) {
   return useQuery({
