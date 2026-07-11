@@ -4,19 +4,27 @@ import { CertificatesService } from './certificates.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
 
-const mockPage = {
-  setContent: jest.fn().mockResolvedValue(undefined),
-  emulateMediaType: jest.fn().mockResolvedValue(undefined),
-  pdf: jest.fn().mockResolvedValue(Buffer.from('pdf-bytes')),
-};
-const mockBrowser = {
-  newPage: jest.fn().mockResolvedValue(mockPage),
-  close: jest.fn().mockResolvedValue(undefined),
-};
+jest.mock('puppeteer', () => {
+  const mockPage = {
+    setContent: jest.fn().mockResolvedValue(undefined),
+    emulateMediaType: jest.fn().mockResolvedValue(undefined),
+    pdf: jest.fn().mockResolvedValue(Buffer.from('pdf-bytes')),
+  };
+  const mockBrowser = {
+    newPage: jest.fn().mockResolvedValue(mockPage),
+    close: jest.fn().mockResolvedValue(undefined),
+  };
+  return {
+    launch: jest.fn().mockResolvedValue(mockBrowser),
+    __mockBrowser: mockBrowser,
+    __mockPage: mockPage,
+  };
+});
 
-jest.mock('puppeteer', () => ({
-  launch: jest.fn().mockResolvedValue(mockBrowser),
-}));
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const puppeteerMock = require('puppeteer');
+const mockBrowser = puppeteerMock.__mockBrowser;
+const mockPage = puppeteerMock.__mockPage;
 
 describe('CertificatesService', () => {
   let service: CertificatesService;

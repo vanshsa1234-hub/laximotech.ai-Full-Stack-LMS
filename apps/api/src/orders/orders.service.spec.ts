@@ -16,7 +16,7 @@ describe('OrdersService', () => {
       course: { findUnique: jest.fn() },
       enrollment: { findUnique: jest.fn(), create: jest.fn() },
       lesson: { findFirst: jest.fn() },
-      order: { findFirst: jest.fn(), create: jest.fn(), findUnique: jest.fn(), update: jest.fn() },
+      order: { findFirst: jest.fn(), findMany: jest.fn(), create: jest.fn(), findUnique: jest.fn(), update: jest.fn() },
       coupon: { findFirst: jest.fn(), update: jest.fn() },
       user: { update: jest.fn() },
       $transaction: jest.fn(),

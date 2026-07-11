@@ -29,7 +29,7 @@ export class ProgressService {
         ...(bookmarkSeconds !== undefined && { bookmarkSeconds }),
       },
       create: {
-        userId, lessonId, watchedSeconds, isCompleted,
+        userId, lessonId, watchedSeconds: Math.max(watchedSeconds, 0), isCompleted,
         lastWatchedAt: new Date(),
         ...(isCompleted && { completedAt: new Date() }),
         ...(bookmarkSeconds !== undefined && { bookmarkSeconds }),

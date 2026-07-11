@@ -4,6 +4,7 @@ import { StorageController } from './storage.controller';
 import { StorageService } from './storage.service';
 
 jest.mock('fs', () => ({
+  ...jest.requireActual('fs'),
   mkdirSync: jest.fn(),
   writeFileSync: jest.fn(),
 }));
