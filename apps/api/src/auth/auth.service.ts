@@ -1,19 +1,19 @@
 import {
   Injectable, UnauthorizedException, ConflictException, BadRequestException,
 } from '@nestjs/common';
-import { JwtService }    from '@nestjs/jwt';
+import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
-import * as bcrypt       from 'bcryptjs';
-import * as crypto       from 'crypto';
+import * as bcrypt from 'bcryptjs';
+import * as crypto from 'crypto';
 
 @Injectable()
 export class AuthService {
   constructor(
-    private prisma:  PrismaService,
-    private jwt:     JwtService,
-    private config:  ConfigService,
-  ) {}
+    private prisma: PrismaService,
+    private jwt: JwtService,
+    private config: ConfigService,
+  ) { }
 
   async register(data: { name: string; email: string; password: string }) {
     const existing = await this.prisma.user.findUnique({ where: { email: data.email } });
@@ -52,13 +52,12 @@ export class AuthService {
     const user = await this.prisma.user.findUnique({ where: { email } });
     if (!user) return { message: 'If that email exists, a reset link has been sent.' };
 
-    const resetToken  = crypto.randomBytes(32).toString('hex');
+    const resetToken = crypto.randomBytes(32).toString('hex');
     const resetExpiry = new Date(Date.now() + 60 * 60 * 1000);
 
-    await this.prisma.verificationToken.upsert({
-      where:  { identifier: email },
-      update: { token: resetToken, expires: resetExpiry },
-      create: { identifier: email, token: resetToken, expires: resetExpiry },
+    await this.prisma.verificationToken.deleteMany({ where: { identifier: email } });
+    await this.prisma.verificationToken.create({
+      data: { identifier: email, token: resetToken, expires: resetExpiry },
     });
     console.log(`[DEV] Reset token for ${email}: ${resetToken}`);
     return { message: 'If that email exists, a reset link has been sent.' };
@@ -74,11 +73,13 @@ export class AuthService {
 
     const hash = await bcrypt.hash(data.newPassword, 12);
     await this.prisma.account.upsert({
-      where:  { provider_providerAccountId: { provider: 'credentials', providerAccountId: data.email } },
+      where: { provider_providerAccountId: { provider: 'credentials', providerAccountId: data.email } },
       update: { access_token: hash },
       create: { userId: user.id, type: 'credentials', provider: 'credentials', providerAccountId: data.email, access_token: hash },
     });
-    await this.prisma.verificationToken.delete({ where: { identifier: data.email } }).catch(() => {});
+    await this.prisma.verificationToken.delete({
+      where: { identifier_token: { identifier: data.email, token: data.token } },
+    }).catch(() => { });
     return { message: 'Password reset successful. You can now log in.' };
   }
 
@@ -95,7 +96,7 @@ export class AuthService {
 
   async getProfile(userId: string) {
     const user = await this.prisma.user.findUnique({
-      where:  { id: userId },
+      where: { id: userId },
       select: {
         id: true, name: true, email: true, image: true, role: true,
         xpPoints: true, streakDays: true, city: true, bio: true,

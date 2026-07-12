@@ -30,7 +30,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
     ResendProvider({
       apiKey: process.env.RESEND_API_KEY!,
-      from:   'noreply@laximotech.ai',
+      from:   'onboarding@resend.dev',
     }),
 
     // Real email + password login — validated directly against the

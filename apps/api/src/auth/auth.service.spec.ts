@@ -14,7 +14,7 @@ describe('AuthService', () => {
     prisma = {
       user: { findUnique: jest.fn(), create: jest.fn(), update: jest.fn() },
       account: { create: jest.fn(), findFirst: jest.fn(), update: jest.fn(), upsert: jest.fn() },
-      verificationToken: { upsert: jest.fn(), findFirst: jest.fn(), delete: jest.fn().mockResolvedValue({}) },
+      verificationToken: { upsert: jest.fn(), findFirst: jest.fn(), create: jest.fn(), deleteMany: jest.fn(), delete: jest.fn().mockResolvedValue({}) },
     };
 
     const moduleRef = await Test.createTestingModule({
@@ -135,12 +135,14 @@ describe('AuthService', () => {
       expect(prisma.verificationToken.upsert).not.toHaveBeenCalled();
     });
 
-    it('upserts a reset token when the email exists', async () => {
+    it('clears any stale token for the email, then creates a fresh reset token', async () => {
       prisma.user.findUnique.mockResolvedValue({ id: 'u1', email: 'a@a.com' });
-      prisma.verificationToken.upsert.mockResolvedValue({});
+      prisma.verificationToken.deleteMany.mockResolvedValue({ count: 1 });
+      prisma.verificationToken.create.mockResolvedValue({});
       const result = await service.forgotPassword('a@a.com');
-      expect(prisma.verificationToken.upsert).toHaveBeenCalledWith(
-        expect.objectContaining({ where: { identifier: 'a@a.com' } }),
+      expect(prisma.verificationToken.deleteMany).toHaveBeenCalledWith({ where: { identifier: 'a@a.com' } });
+      expect(prisma.verificationToken.create).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ identifier: 'a@a.com' }) }),
       );
       expect(result.message).toMatch(/if that email exists/i);
     });
@@ -188,7 +190,9 @@ describe('AuthService', () => {
           where: { provider_providerAccountId: { provider: 'credentials', providerAccountId: 'a@a.com' } },
         }),
       );
-      expect(prisma.verificationToken.delete).toHaveBeenCalledWith({ where: { identifier: 'a@a.com' } });
+      expect(prisma.verificationToken.delete).toHaveBeenCalledWith({
+        where: { identifier_token: { identifier: 'a@a.com', token: 'tok' } },
+      });
       expect(result.message).toMatch(/successful/i);
     });
   });
