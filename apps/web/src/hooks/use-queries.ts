@@ -123,7 +123,31 @@ export function useVerifyCertificate(certificateNo: string) {
 
 export function useRegenerateCertificates() {
   return useMutation({
-    mutationFn: () => certificatesApi.regenerateAll().then(r => r.data),
+    mutationFn: (courseId?: string) => certificatesApi.regenerateAll(courseId).then(r => r.data),
+  });
+}
+
+export function useCourseCertificateTemplate(courseId: string) {
+  return useQuery({
+    queryKey: ['course-certificate-template', courseId],
+    queryFn:  () => certificatesApi.getCourseTemplate(courseId).then(r => r.data),
+    enabled:  !!courseId,
+  });
+}
+
+export function useUpdateCourseCertificateTemplate(courseId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: any) => certificatesApi.updateCourseTemplate(courseId, data).then(r => r.data),
+    onSuccess:  () => queryClient.invalidateQueries({ queryKey: ['course-certificate-template', courseId] }),
+  });
+}
+
+export function useResetCourseCertificateTemplate(courseId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => certificatesApi.resetCourseTemplate(courseId).then(r => r.data),
+    onSuccess:  () => queryClient.invalidateQueries({ queryKey: ['course-certificate-template', courseId] }),
   });
 }
 

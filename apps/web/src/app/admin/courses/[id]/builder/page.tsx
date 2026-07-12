@@ -1,15 +1,16 @@
 // C:\Users\LENOVO\Downloads\laximotech(project)\laximotech7\apps\web\src\app\admin\courses\[id]\builder\page.tsx
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, BookOpen, Check, FileQuestion, Loader2, Plus, Save, Video, User, Mail } from 'lucide-react';
+import { ArrowLeft, BookOpen, Check, FileQuestion, Loader2, Plus, Save, Video, User, Mail, Award } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { coursesApi } from '@/lib/api';
-import { useAdminInstructors } from '@/hooks/use-queries';
+import { useAdminInstructors, useCourseCertificateTemplate, useUpdateCourseCertificateTemplate, useResetCourseCertificateTemplate, useAdminSiteContent, useRegenerateCertificates } from '@/hooks/use-queries';
 import { ImageUpload } from '@/components/admin/image-upload';
 import { VideoUpload } from '@/components/admin/video-upload';
+import { CertificateTemplateEditor } from '@/components/admin/certificate-template-editor';
 
 const CONTENT_TYPES = ['VIDEO', 'PDF', 'QUIZ', 'CODE', 'TEXT'];
 
@@ -98,6 +99,49 @@ export default function CourseBuilderPage({ params }: { params: { id: string } }
     } finally {
       setSavingInstructor(false);
     }
+  };
+
+  // ── Certificate design override for this course ──────────────────────
+  const { data: courseTemplate, isLoading: loadingCourseTemplate } = useCourseCertificateTemplate(params.id);
+  const { data: allSiteContent } = useAdminSiteContent();
+  const updateCourseTemplate = useUpdateCourseCertificateTemplate(params.id);
+  const resetCourseTemplate  = useResetCourseCertificateTemplate(params.id);
+  const regenerate           = useRegenerateCertificates();
+  const [certDraft, setCertDraft] = useState<any>(null);
+
+  const globalDefaultTemplate = (allSiteContent as any[])?.find(c => c.key === 'certificate-template')?.data;
+  const hasCourseOverride = !!courseTemplate?.backgroundImageUrl;
+
+  useEffect(() => {
+    if (hasCourseOverride) setCertDraft(courseTemplate);
+  }, [courseTemplate?.backgroundImageUrl]);
+
+  // Start customizing: seed the draft from the site-wide default so the
+  // admin isn't positioning fields from a completely blank slate.
+  const startCustomizing = () => {
+    setCertDraft(courseTemplate?.fields ? courseTemplate : globalDefaultTemplate ?? { backgroundImageUrl: '', fields: {} });
+  };
+
+  const saveCertTemplate = () => {
+    updateCourseTemplate.mutate(certDraft, {
+      onSuccess: () => toast.success('Saved! This course will now use its own certificate design.'),
+      onError:   () => toast.error('Failed to save.'),
+    });
+  };
+
+  const resetCertTemplate = () => {
+    if (!confirm("Remove this course's custom certificate design? It'll go back to using the site-wide default.")) return;
+    resetCourseTemplate.mutate(undefined, {
+      onSuccess: () => { toast.success('Reverted to the site-wide default design.'); setCertDraft(null); },
+    });
+  };
+
+  const regenerateCourseCerts = () => {
+    if (!confirm("Re-render every certificate already issued for THIS course with the current design? This may take a moment.")) return;
+    regenerate.mutate(params.id, {
+      onSuccess: (res: any) => toast.success(`Updated ${res.succeeded}/${res.total} certificates for this course.`),
+      onError:   () => toast.error('Failed to regenerate certificates.'),
+    });
   };
 
   const selectedLesson = useMemo(() => {
@@ -300,6 +344,48 @@ export default function CourseBuilderPage({ params }: { params: { id: string } }
             {savingInstructor && <Loader2 size={14} className="animate-spin text-gray-400" />}
           </div>
         </div>
+      </div>
+
+      {/* Certificate Design — per-course override of the site-wide default */}
+      <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5 mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <Award size={18} className="text-brand-orange" />
+            <h2 className="text-white font-semibold text-sm">Certificate Design</h2>
+          </div>
+          {hasCourseOverride && (
+            <span className="text-[11px] bg-brand-orange/10 text-brand-orange px-2.5 py-1 rounded-full font-semibold">
+              Custom design active
+            </span>
+          )}
+        </div>
+
+        {loadingCourseTemplate ? (
+          <div className="flex justify-center py-10"><Loader2 size={20} className="text-brand-orange animate-spin" /></div>
+        ) : !hasCourseOverride && !certDraft ? (
+          <div className="border-2 border-dashed border-gray-800 rounded-xl p-6 text-center">
+            <p className="text-gray-400 text-sm mb-1">This course currently uses the site-wide default certificate design.</p>
+            <p className="text-gray-500 text-xs mb-4">Give this course its own certificate background and text positions.</p>
+            <button onClick={startCustomizing}
+              className="inline-flex items-center gap-2 bg-brand-orange text-white font-semibold text-xs px-4 py-2.5 rounded-xl hover:bg-brand-orange-light transition-colors">
+              <Award size={14} /> Customize for This Course
+            </button>
+          </div>
+        ) : (
+          <CertificateTemplateEditor
+            data={certDraft ?? courseTemplate}
+            onChange={setCertDraft}
+            onSave={saveCertTemplate}
+            saving={updateCourseTemplate.isPending}
+            onReset={resetCertTemplate}
+            resetting={resetCourseTemplate.isPending}
+            showReset={hasCourseOverride}
+            onRegenerate={regenerateCourseCerts}
+            regenerating={regenerate.isPending}
+            regenerateLabel="Apply Design to This Course's Certificates"
+            regenerateNote="Only re-renders certificates already issued for this course — other courses are untouched."
+          />
+        )}
       </div>
 
       <div className="grid grid-cols-12 gap-5">

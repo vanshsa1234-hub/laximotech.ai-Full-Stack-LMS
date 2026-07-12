@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Param, Body, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Param, Body, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { CertificatesService } from './certificates.service';
 import { JwtAuthGuard }        from '../auth/guards/jwt-auth.guard';
@@ -58,7 +58,32 @@ export class CertificatesController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN)
   @Post('regenerate-all')
-  regenerateAll() {
-    return this.certs.regenerateAllCertificates();
+  regenerateAll(@Query('courseId') courseId?: string) {
+    return this.certs.regenerateAllCertificates(courseId);
+  }
+
+  // ── Per-course certificate design (Certificate tab in the course builder) ──
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @Get('course-template/:courseId')
+  getCourseTemplate(@Param('courseId') courseId: string) {
+    return this.certs.getCourseTemplate(courseId);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @Patch('course-template/:courseId')
+  updateCourseTemplate(@Param('courseId') courseId: string, @Body() body: any) {
+    return this.certs.updateCourseTemplate(courseId, body);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @Delete('course-template/:courseId')
+  resetCourseTemplate(@Param('courseId') courseId: string) {
+    return this.certs.resetCourseTemplate(courseId);
   }
 }

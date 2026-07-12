@@ -183,6 +183,10 @@ model Course {
   isFeatured   Boolean        @default(false)
   metaTitle    String?        // SEO
   metaDesc     String?        // SEO
+  // Per-course certificate design override — same shape as the global
+  // 'certificate-template' SiteContent entry ({ backgroundImageUrl, fields }).
+  // Null means "use the site-wide default certificate design".
+  certificateTemplate Json?
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
 

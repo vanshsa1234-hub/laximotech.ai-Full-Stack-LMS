@@ -98,9 +98,12 @@ export const quizzesApi = {
 
 // ── Certificates ─────────────────────────────────────────────
 export const certificatesApi = {
-  mine:          ()  => api.get('/certificates/me'),
-  verify:        (certificateNo: string) => api.get(`/certificates/verify/${certificateNo}`),
-  regenerateAll: ()  => api.post('/certificates/regenerate-all'),
+  mine:                ()  => api.get('/certificates/me'),
+  verify:              (certificateNo: string) => api.get(`/certificates/verify/${certificateNo}`),
+  regenerateAll:       (courseId?: string) => api.post('/certificates/regenerate-all', {}, { params: courseId ? { courseId } : {} }),
+  getCourseTemplate:   (courseId: string) => api.get(`/certificates/course-template/${courseId}`),
+  updateCourseTemplate:(courseId: string, data: any) => api.patch(`/certificates/course-template/${courseId}`, data),
+  resetCourseTemplate: (courseId: string) => api.delete(`/certificates/course-template/${courseId}`),
 };
 
 // ── Auth ─────────────────────────────────────────────────────

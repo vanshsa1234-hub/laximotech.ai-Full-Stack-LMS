@@ -3,13 +3,18 @@ import { NotFoundException } from '@nestjs/common';
 import { CertificatesService } from './certificates.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
+import * as puppeteer from 'puppeteer';
 
 jest.mock('puppeteer', () => {
   const mockPage = {
-    setContent: jest.fn().mockResolvedValue(undefined),
-    emulateMediaType: jest.fn().mockResolvedValue(undefined),
-    pdf: jest.fn().mockResolvedValue(Buffer.from('pdf-bytes')),
-  };
+  setContent: jest.fn().mockResolvedValue(undefined),
+  emulateMediaType: jest.fn().mockResolvedValue(undefined),
+  // Resolves truthy for both calls the real service makes: the font-load
+  // wait (return value unused) and the background-image load check (must
+  // be truthy or the service throws "background image failed to load").
+  evaluate: jest.fn().mockResolvedValue(true),
+  pdf: jest.fn().mockResolvedValue(Buffer.from('pdf-bytes')),
+};
   const mockBrowser = {
     newPage: jest.fn().mockResolvedValue(mockPage),
     close: jest.fn().mockResolvedValue(undefined),
@@ -21,9 +26,9 @@ jest.mock('puppeteer', () => {
   };
 });
 
-const puppeteerMock = require('puppeteer');
-const mockBrowser = puppeteerMock.__mockBrowser;
-const mockPage = puppeteerMock.__mockPage;
+
+const mockBrowser = (puppeteer as any).__mockBrowser;
+const mockPage = (puppeteer as any).__mockPage;
 
 describe('CertificatesService', () => {
   let service: CertificatesService;

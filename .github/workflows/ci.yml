@@ -57,7 +57,7 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 20, cache: npm }
       - run: npm ci
-      - run: npm run db:push
+      - run: npx prisma migrate deploy --schema=apps/api/prisma/schema.prisma
       - run: npm test --workspace=apps/api
 
   # ── Build check ──────────────────────────────────────────────

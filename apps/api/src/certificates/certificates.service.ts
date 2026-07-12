@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService }  from '../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
+import { Prisma } from '@prisma/client';
 import * as puppeteer from 'puppeteer';
 
 @Injectable()
@@ -85,13 +86,22 @@ export class CertificatesService {
       where: { id: certificateId },
       include: {
         user:   { select: { name: true } },
-        course: { select: { title: true } },
+        course: { select: { title: true, certificateTemplate: true } },
       },
     });
     if (!cert) throw new NotFoundException('Certificate not found.');
 
-    const customTemplate = await this.prisma.siteContent.findUnique({ where: { key: 'certificate-template' } });
-    const templateData = customTemplate?.data as any;
+    // Template resolution priority:
+    //   1. This course's own certificate design (set in the course builder's
+    //      Certificate tab)
+    //   2. The site-wide default design (/admin/certificate-template)
+    //   3. The built-in hardcoded design, if neither of the above is set
+    const courseTemplate = cert.course.certificateTemplate as any;
+    let templateData = courseTemplate?.backgroundImageUrl ? courseTemplate : null;
+    if (!templateData) {
+      const globalTemplate = await this.prisma.siteContent.findUnique({ where: { key: 'certificate-template' } });
+      templateData = globalTemplate?.data as any;
+    }
 
     const certData = {
       holderName:     cert.user.name ?? 'Student',
@@ -101,9 +111,6 @@ export class CertificatesService {
       finalScore:     cert.finalScore ?? 0,
     };
 
-    // Use the admin's custom background + field layout if one has been
-    // configured in /admin/certificate-template; otherwise fall back to the
-    // built-in design so nothing breaks for admins who never touch that page.
     const html = templateData?.backgroundImageUrl
       ? this.buildCustomCertificateHtml(templateData, certData)
       : this.buildCertificateHtml(certData);
@@ -117,6 +124,12 @@ export class CertificatesService {
       const page = await browser.newPage();
       await page.setContent(html, { waitUntil: 'networkidle0' });
       await page.emulateMediaType('screen');
+
+      // Wait for any custom Google Fonts (e.g. a script font for the
+      // student's name) to actually finish loading — same race condition as
+      // the background image: without this, Chromium's print pipeline can
+      // silently fall back to a default system font.
+      await page.evaluate(() => (document as any).fonts?.ready);
 
       // Guard against the classic Puppeteer PDF issue where a CSS/background
       // image hasn't actually finished loading by the time the PDF snapshot
@@ -138,7 +151,7 @@ export class CertificatesService {
       if (!bgLoadOk) {
         throw new Error(
           'Certificate background image failed to load (broken URL, unreachable server, or unsupported format). ' +
-          'Re-upload the background image in /admin/certificate-template.',
+          'Re-upload the background image in the certificate design settings.',
         );
       }
 
@@ -155,7 +168,7 @@ export class CertificatesService {
       const filename = `${cert.certificateNo}.pdf`;
       const stored = await this.storage.saveGeneratedFile('certificates', filename, Buffer.from(pdf), 'application/pdf');
 
-      // Save to DB — either a full local URL or an S3 key, both of
+      // Save to DB — either a '/uploads/...' path or an S3 key, both of
       // which getViewUrl() knows how to resolve back into a working URL.
       await this.prisma.certificate.update({
         where: { id: certificateId },
@@ -168,14 +181,42 @@ export class CertificatesService {
     }
   }
 
+  // ── Per-course certificate design (used by the Certificate tab inside
+  // each course's builder page) ───────────────────────────────────────────
+  async getCourseTemplate(courseId: string) {
+    const course = await this.prisma.course.findUnique({
+      where:  { id: courseId },
+      select: { certificateTemplate: true },
+    });
+    if (!course) throw new NotFoundException('Course not found.');
+    return course.certificateTemplate ?? null;
+  }
+
+  async updateCourseTemplate(courseId: string, data: any) {
+    await this.prisma.course.update({
+      where: { id: courseId },
+      data:  { certificateTemplate: data },
+    });
+    return { success: true };
+  }
+
+  async resetCourseTemplate(courseId: string) {
+    // Clears the override — the course falls back to the site-wide default.
+    await this.prisma.course.update({
+      where: { id: courseId },
+      data:  { certificateTemplate: Prisma.JsonNull },
+    });
+    return { success: true };
+  }
+
   // Admin: re-render every issued certificate's PDF using whatever template
   // is currently saved. Needed because a certificate's PDF is normally only
   // generated once, at the moment it's issued — without this, saving a new
   // design in /admin/certificate-template has no effect on certificates that
   // were already issued before the design existed.
-  async regenerateAllCertificates() {
+  async regenerateAllCertificates(courseId?: string) {
     const certs = await this.prisma.certificate.findMany({
-      where: { status: 'ISSUED' },
+      where: { status: 'ISSUED', ...(courseId ? { courseId } : {}) },
       select: { id: true },
     });
 
@@ -246,11 +287,15 @@ export class CertificatesService {
           font-family:${f.fontFamily}; text-align:${f.textAlign}; white-space:nowrap;
         ">${values[key] ?? ''}</div>`).join('');
 
+    const fontsUsed = Object.values(template.fields).map((f: any) => f.fontFamily);
+    const fontImport = this.buildGoogleFontsImport(fontsUsed);
+
     return `
 <!DOCTYPE html>
 <html>
 <head><meta charset="UTF-8" />
 <style>
+  ${fontImport}
   * { margin:0; padding:0; box-sizing:border-box; }
   body { width:297mm; height:210mm; overflow:hidden; }
   .cert { position:relative; width:297mm; height:210mm; background:#1a1a1a; }
@@ -262,6 +307,27 @@ export class CertificatesService {
   ${overlays}
 </div></body>
 </html>`;
+  }
+
+  // Curated Google Font options offered in the admin font picker (see
+  // FONT_OPTIONS in the frontend). Web-safe fonts (Georgia, Arial) need no
+  // import. Only imports the families actually used by this template's
+  // fields, so we're not pulling in fonts nobody selected.
+  private static readonly GOOGLE_FONTS: Record<string, string> = {
+    "'Playfair Display', serif": 'Playfair+Display:wght@400;600;700',
+    "'Poppins', sans-serif":     'Poppins:wght@400;600;700',
+    "'Montserrat', sans-serif":  'Montserrat:wght@400;600;700',
+    "'Dancing Script', cursive": 'Dancing+Script:wght@400;600;700',
+    "'Great Vibes', cursive":    'Great+Vibes',
+    "'Pacifico', cursive":       'Pacifico',
+  };
+
+  private buildGoogleFontsImport(fontFamilies: string[]): string {
+    const families = Array.from(new Set(fontFamilies))
+      .map(f => CertificatesService.GOOGLE_FONTS[f])
+      .filter(Boolean);
+    if (families.length === 0) return '';
+    return `@import url('https://fonts.googleapis.com/css2?${families.map(f => `family=${f}`).join('&')}&display=swap');`;
   }
 
   private buildCertificateHtml(data: {
