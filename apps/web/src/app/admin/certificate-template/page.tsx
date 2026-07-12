@@ -1,7 +1,7 @@
 'use client';
-
+import { Loader2, Save, RotateCcw, Award, RefreshCw, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { Loader2, Save, RotateCcw, Award, RefreshCw } from 'lucide-react';
+// import { Loader2, Save, RotateCcw, Award, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAdminSiteContent, useUpdateSiteContent, useResetSiteContent, useRegenerateCertificates } from '@/hooks/use-queries';
 import { ImageUpload } from '@/components/admin/image-upload';
@@ -38,6 +38,18 @@ export default function CertificateTemplatePage() {
 
   const entry = (all as any[])?.find(c => c.key === 'certificate-template');
   const [draft, setDraft] = useState<any>(null);
+  const [bgStatus, setBgStatus] = useState<'idle' | 'checking' | 'ok' | 'error'>('idle');
+
+  useEffect(() => {
+    const url = draft?.backgroundImageUrl;
+    if (!url) { setBgStatus('idle'); return; }
+    setBgStatus('checking');
+    const img = new Image();
+    img.onload  = () => setBgStatus('ok');
+    img.onerror = () => setBgStatus('error');
+    img.src = url;
+    return () => { img.onload = null; img.onerror = null; };
+  }, [draft?.backgroundImageUrl]);
 
   useEffect(() => { if (entry) setDraft(entry.data); }, [entry?.key, all]);
 
@@ -49,6 +61,13 @@ export default function CertificateTemplatePage() {
   };
 
   const handleSave = () => {
+    if (bgStatus === 'error') {
+      const proceed = confirm(
+        "This background image failed to load — certificates saved now will download with NO background photo. " +
+        "Save anyway?"
+      );
+      if (!proceed) return;
+    }
     updateContent.mutate({ key: 'certificate-template', data: draft }, {
       onSuccess: () => toast.success('Saved! New certificates will use this design.'),
       onError:   () => toast.error('Failed to save.'),
@@ -95,6 +114,30 @@ export default function CertificateTemplatePage() {
             aspectClassName="aspect-[297/210]"
             helpText="Recommended: 2970×2100px (A4 landscape), so text stays sharp in the PDF."
           />
+
+          {bgStatus === 'checking' && (
+            <div className="flex items-center gap-2 text-xs text-gray-400">
+              <Loader2 size={13} className="animate-spin" /> Checking background image...
+            </div>
+          )}
+          {bgStatus === 'error' && (
+            <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 flex gap-2.5">
+              <AlertTriangle size={16} className="text-red-400 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-red-400 text-xs font-semibold">This background image failed to load.</p>
+                <p className="text-red-300/70 text-[11px] mt-1 leading-relaxed">
+                  Certificates generated with this design will have no background photo. This usually
+                  means the API server isn't running, the file was deleted, or the saved URL points
+                  somewhere unreachable. Try re-uploading the image.
+                </p>
+              </div>
+            </div>
+          )}
+          {bgStatus === 'ok' && (
+            <div className="flex items-center gap-1.5 text-xs text-green-400">
+              <CheckCircle2 size={13} /> Background image loads correctly.
+            </div>
+          )}
 
           {draft.backgroundImageUrl && (
             <div className="space-y-4 pt-2">
@@ -182,7 +225,7 @@ export default function CertificateTemplatePage() {
         {/* Live preview — mirrors exactly what the real PDF generator renders */}
         <div className="bg-gray-900 rounded-2xl border border-gray-800 p-6 h-fit">
           <p className="text-xs font-semibold text-gray-400 mb-3">Live Preview (sample data)</p>
-          {draft.backgroundImageUrl ? (
+          {draft.backgroundImageUrl && bgStatus !== 'error' ? (
             <div className="relative w-full aspect-[297/210] rounded-lg overflow-hidden border border-gray-700"
               style={{ backgroundImage: `url(${draft.backgroundImageUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' }}>
               {Object.entries(draft.fields).map(([key, f]: [string, any]) => {
@@ -191,7 +234,7 @@ export default function CertificateTemplatePage() {
                   <div key={key} style={{
                     position: 'absolute', left: `${f.x}%`, top: `${f.y}%`,
                     transform: `translate(${translateForAlign(f.textAlign)}, -50%)`,
-                    fontSize: `${f.fontSize * 0.45}px`, // scaled down to fit the on-screen preview box
+                    fontSize: `${f.fontSize * 0.45}px`,
                     color: f.color, fontWeight: f.fontWeight, fontFamily: f.fontFamily,
                     textAlign: f.textAlign as any, whiteSpace: 'nowrap',
                   }}>
@@ -199,6 +242,12 @@ export default function CertificateTemplatePage() {
                   </div>
                 );
               })}
+            </div>
+          ) : draft.backgroundImageUrl && bgStatus === 'error' ? (
+            <div className="aspect-[297/210] rounded-lg border-2 border-dashed border-red-500/40 bg-red-500/5 flex flex-col items-center justify-center gap-2">
+              <AlertTriangle size={22} className="text-red-400" />
+              <p className="text-red-400 text-sm text-center px-6 font-semibold">Background image broken</p>
+              <p className="text-gray-500 text-xs text-center px-6">Certificates will render without it until this is fixed.</p>
             </div>
           ) : (
             <div className="aspect-[297/210] rounded-lg border-2 border-dashed border-gray-700 flex items-center justify-center">

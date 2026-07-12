@@ -8,6 +8,8 @@ import {
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { v4 as uuid } from 'uuid';
+import { mkdirSync, writeFileSync } from 'fs';
+import { join } from 'path';
 
 @Injectable()
 export class StorageService {
@@ -77,6 +79,31 @@ export class StorageService {
     return key;
   }
 
+  // Same "local disk first, S3 fallback" pattern already used by the general
+  // /storage/upload endpoint — but for buffers generated on the server (like
+  // certificate PDFs) rather than files coming from a multipart request.
+  // Returns a value ready to store directly as pdfUrl/imageUrl: either a
+  // full http://localhost:<port>/uploads/... URL, or, if local disk write
+  // fails, an S3 key (resolved later via getViewUrl/getPublicUrl).
+  async saveGeneratedFile(folder: string, filename: string, buffer: Buffer, contentType: string): Promise<string> {
+    try {
+      const dir = join(__dirname, '..', '..', 'uploads', folder); // apps/api/uploads/<folder>
+      mkdirSync(dir, { recursive: true });
+      writeFileSync(join(dir, filename), buffer);
+      // Full URL, not a relative path — this runs outside any HTTP request
+      // context, so there's no req.protocol/host to read; build it from the
+      // API's own port so it always points at the API server, not the web app.
+      const port = this.config.get<string>('PORT') ?? '4000';
+      return `http://localhost:${port}/uploads/${folder}/${filename}`;
+    } catch (localErr) {
+      console.warn('Local disk write failed for generated file, falling back to S3:', localErr);
+    }
+
+    const key = `${folder}/${filename}`;
+    await this.uploadBuffer(key, buffer, contentType);
+    return key;
+  }
+  
   async deleteFile(key: string): Promise<void> {
     if (!this.enabled || !key) return;
     await this.s3.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: key }));

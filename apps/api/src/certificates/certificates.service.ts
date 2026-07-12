@@ -19,13 +19,29 @@ export class CertificatesService {
       },
     });
 
-    // pdfUrl/imageUrl are stored as raw S3 keys — resolve them to real,
-    // clickable URLs here rather than leaving that to the frontend.
-    return Promise.all(certs.map(async c => ({
-      ...c,
-      pdfUrl:   c.pdfUrl ? await this.storage.getViewUrl(c.pdfUrl, 3600) : null,
-      imageUrl: c.imageUrl ? this.storage.getPublicUrl(c.imageUrl) : null,
-    })));
+    // pdfUrl/imageUrl are stored as raw S3 keys (or, with the local-disk
+    // fallback, full URLs) — resolve them to real, clickable URLs here.
+    // If a certificate's PDF is missing, or its stored key can't actually be
+    // resolved to anything (e.g. it was saved back when S3 wasn't configured
+    // and never really got uploaded), regenerate it now instead of leaving
+    // the student with a permanently broken/missing download.
+    return Promise.all(certs.map(async c => {
+      let pdfKey = c.pdfUrl;
+      let resolved = pdfKey ? await this.storage.getViewUrl(pdfKey, 3600) : '';
+      if (!resolved) {
+        try {
+          pdfKey = await this.generateCertificatePdf(c.id);
+          resolved = await this.storage.getViewUrl(pdfKey, 3600);
+        } catch (err) {
+          console.error(`On-demand certificate PDF generation failed for ${c.id}:`, err);
+        }
+      }
+      return {
+        ...c,
+        pdfUrl:   resolved || null,
+        imageUrl: c.imageUrl ? this.storage.getPublicUrl(c.imageUrl) : null,
+      };
+    }));
   }
 
   async verifyCertificate(certificateNo: string) {
@@ -41,6 +57,17 @@ export class CertificatesService {
       return { valid: false, message: 'Certificate not found or has been revoked.' };
     }
 
+    let pdfKey = cert.pdfUrl;
+    let resolved = pdfKey ? await this.storage.getViewUrl(pdfKey, 3600) : '';
+    if (!resolved) {
+      try {
+        pdfKey = await this.generateCertificatePdf(cert.id);
+        resolved = await this.storage.getViewUrl(pdfKey, 3600);
+      } catch (err) {
+        console.error(`On-demand certificate PDF generation failed for ${cert.id}:`, err);
+      }
+    }
+
     return {
       valid:          true,
       certificateNo:  cert.certificateNo,
@@ -48,7 +75,7 @@ export class CertificatesService {
       courseTitle:    cert.course.title,
       issuedAt:       cert.issuedAt.toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }),
       finalScore:     cert.finalScore,
-      pdfUrl:         cert.pdfUrl ? await this.storage.getViewUrl(cert.pdfUrl, 3600) : null,
+      pdfUrl:         resolved || null,
       imageUrl:       cert.imageUrl ? this.storage.getPublicUrl(cert.imageUrl) : null,
     };
   }
@@ -91,6 +118,30 @@ export class CertificatesService {
       await page.setContent(html, { waitUntil: 'networkidle0' });
       await page.emulateMediaType('screen');
 
+      // Guard against the classic Puppeteer PDF issue where a CSS/background
+      // image hasn't actually finished loading by the time the PDF snapshot
+      // is taken — networkidle0 alone isn't always enough for Chromium's
+      // print pipeline specifically. If a background image is present,
+      // explicitly wait for it (or fail clearly if it's broken) rather than
+      // silently generating a certificate with no background photo.
+      const bgLoadOk = await page.evaluate(async () => {
+        const img = document.querySelector('img.cert-bg') as HTMLImageElement | null;
+        if (!img) return true; // no custom background configured — nothing to wait for
+        if (img.complete && img.naturalWidth > 0) return true;
+        try {
+          await img.decode();
+          return img.naturalWidth > 0;
+        } catch {
+          return false;
+        }
+      });
+      if (!bgLoadOk) {
+        throw new Error(
+          'Certificate background image failed to load (broken URL, unreachable server, or unsupported format). ' +
+          'Re-upload the background image in /admin/certificate-template.',
+        );
+      }
+
       const pdf = await page.pdf({
         format:              'A4',
         landscape:           true,
@@ -98,17 +149,20 @@ export class CertificatesService {
         margin:              { top: '0', right: '0', bottom: '0', left: '0' },
       });
 
-      // Upload to S3
-      const key = `certificates/${cert.certificateNo}.pdf`;
-      await this.storage.uploadBuffer(key, Buffer.from(pdf), 'application/pdf');
+      // Save the PDF — tries local disk first (works out of the box in dev
+      // without any AWS setup), falls back to S3 if configured and disk
+      // write fails.
+      const filename = `${cert.certificateNo}.pdf`;
+      const stored = await this.storage.saveGeneratedFile('certificates', filename, Buffer.from(pdf), 'application/pdf');
 
-      // Save key to DB
+      // Save to DB — either a full local URL or an S3 key, both of
+      // which getViewUrl() knows how to resolve back into a working URL.
       await this.prisma.certificate.update({
         where: { id: certificateId },
-        data:  { pdfUrl: key },
+        data:  { pdfUrl: stored },
       });
 
-      return key;
+      return stored;
     } finally {
       if (browser) await browser.close();
     }
@@ -199,11 +253,14 @@ export class CertificatesService {
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
   body { width:297mm; height:210mm; overflow:hidden; }
-  .cert { position:relative; width:297mm; height:210mm;
-    background:url('${template.backgroundImageUrl}') center/cover no-repeat; }
+  .cert { position:relative; width:297mm; height:210mm; background:#1a1a1a; }
+  .cert-bg { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
 </style>
 </head>
-<body><div class="cert">${overlays}</div></body>
+<body><div class="cert">
+  <img class="cert-bg" src="${template.backgroundImageUrl}" />
+  ${overlays}
+</div></body>
 </html>`;
   }
 

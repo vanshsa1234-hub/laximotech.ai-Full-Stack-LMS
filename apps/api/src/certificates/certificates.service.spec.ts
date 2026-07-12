@@ -21,7 +21,6 @@ jest.mock('puppeteer', () => {
   };
 });
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
 const puppeteerMock = require('puppeteer');
 const mockBrowser = puppeteerMock.__mockBrowser;
 const mockPage = puppeteerMock.__mockPage;
@@ -40,6 +39,7 @@ describe('CertificatesService', () => {
       getViewUrl: jest.fn().mockResolvedValue('https://signed.example.com/cert.pdf'),
       getPublicUrl: jest.fn().mockReturnValue('https://cdn.example.com/cert.png'),
       uploadBuffer: jest.fn().mockResolvedValue('certificates/CERT-1.pdf'),
+      saveGeneratedFile: jest.fn().mockResolvedValue('http://localhost:4000/uploads/certificates/CERT-1.pdf'),
     };
 
     const moduleRef = await Test.createTestingModule({
@@ -111,7 +111,7 @@ describe('CertificatesService', () => {
       await expect(service.generateCertificatePdf('missing')).rejects.toBeInstanceOf(NotFoundException);
     });
 
-    it('renders, uploads, and saves the PDF key, then closes the browser', async () => {
+    it('renders, saves the PDF via saveGeneratedFile, and closes the browser', async () => {
       prisma.certificate.findUnique.mockResolvedValue({
         id: 'cert1', certificateNo: 'CERT-1', finalScore: 88,
         issuedAt: new Date('2026-01-01'),
@@ -119,12 +119,15 @@ describe('CertificatesService', () => {
       });
       prisma.certificate.update.mockResolvedValue({});
 
-      const key = await service.generateCertificatePdf('cert1');
+      const stored = await service.generateCertificatePdf('cert1');
 
-      expect(key).toBe('certificates/CERT-1.pdf');
-      expect(storage.uploadBuffer).toHaveBeenCalledWith('certificates/CERT-1.pdf', expect.any(Buffer), 'application/pdf');
+      expect(stored).toBe('http://localhost:4000/uploads/certificates/CERT-1.pdf');
+      expect(storage.saveGeneratedFile).toHaveBeenCalledWith(
+        'certificates', 'CERT-1.pdf', expect.any(Buffer), 'application/pdf',
+      );
       expect(prisma.certificate.update).toHaveBeenCalledWith({
-        where: { id: 'cert1' }, data: { pdfUrl: 'certificates/CERT-1.pdf' },
+        where: { id: 'cert1' },
+        data: { pdfUrl: 'http://localhost:4000/uploads/certificates/CERT-1.pdf' },
       });
       expect(mockBrowser.close).toHaveBeenCalled();
     });

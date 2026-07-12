@@ -126,4 +126,91 @@ describe('AuthService', () => {
       );
     });
   });
+
+  describe('forgotPassword', () => {
+    it('returns a generic message without creating a reset token when the email does not exist', async () => {
+      prisma.user.findUnique.mockResolvedValue(null);
+      const result = await service.forgotPassword('nope@a.com');
+      expect(result.message).toMatch(/if that email exists/i);
+      expect(prisma.verificationToken.upsert).not.toHaveBeenCalled();
+    });
+
+    it('upserts a reset token when the email exists', async () => {
+      prisma.user.findUnique.mockResolvedValue({ id: 'u1', email: 'a@a.com' });
+      prisma.verificationToken.upsert.mockResolvedValue({});
+      const result = await service.forgotPassword('a@a.com');
+      expect(prisma.verificationToken.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { identifier: 'a@a.com' } }),
+      );
+      expect(result.message).toMatch(/if that email exists/i);
+    });
+  });
+
+  describe('resetPassword', () => {
+    it('rejects an invalid or unknown reset token', async () => {
+      prisma.verificationToken.findFirst.mockResolvedValue(null);
+      await expect(
+        service.resetPassword({ token: 'bad', email: 'a@a.com', newPassword: 'newpassword123' }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('rejects an expired reset token', async () => {
+      prisma.verificationToken.findFirst.mockResolvedValue({ expires: new Date(Date.now() - 1000) });
+      await expect(
+        service.resetPassword({ token: 'tok', email: 'a@a.com', newPassword: 'newpassword123' }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('rejects a new password shorter than 8 characters', async () => {
+      prisma.verificationToken.findFirst.mockResolvedValue({ expires: new Date(Date.now() + 60000) });
+      await expect(
+        service.resetPassword({ token: 'tok', email: 'a@a.com', newPassword: 'short' }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('rejects when the user no longer exists', async () => {
+      prisma.verificationToken.findFirst.mockResolvedValue({ expires: new Date(Date.now() + 60000) });
+      prisma.user.findUnique.mockResolvedValue(null);
+      await expect(
+        service.resetPassword({ token: 'tok', email: 'a@a.com', newPassword: 'newpassword123' }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('resets the password and deletes the used token on success', async () => {
+      prisma.verificationToken.findFirst.mockResolvedValue({ expires: new Date(Date.now() + 60000) });
+      prisma.user.findUnique.mockResolvedValue({ id: 'u1', email: 'a@a.com' });
+      prisma.account.upsert.mockResolvedValue({});
+
+      const result = await service.resetPassword({ token: 'tok', email: 'a@a.com', newPassword: 'newpassword123' });
+
+      expect(prisma.account.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { provider_providerAccountId: { provider: 'credentials', providerAccountId: 'a@a.com' } },
+        }),
+      );
+      expect(prisma.verificationToken.delete).toHaveBeenCalledWith({ where: { identifier: 'a@a.com' } });
+      expect(result.message).toMatch(/successful/i);
+    });
+  });
+
+  describe('getProfile', () => {
+    it('throws UnauthorizedException when the user does not exist', async () => {
+      prisma.user.findUnique.mockResolvedValue(null);
+      await expect(service.getProfile('missing')).rejects.toBeInstanceOf(UnauthorizedException);
+    });
+
+    it('reports hasPassword true when a credentials account exists', async () => {
+      prisma.user.findUnique.mockResolvedValue({ id: 'u1', email: 'a@a.com' });
+      prisma.account.findFirst.mockResolvedValue({ id: 'acc1' });
+      const result = await service.getProfile('u1');
+      expect(result.hasPassword).toBe(true);
+    });
+
+    it('reports hasPassword false when no credentials account exists (OAuth-only user)', async () => {
+      prisma.user.findUnique.mockResolvedValue({ id: 'u1', email: 'a@a.com' });
+      prisma.account.findFirst.mockResolvedValue(null);
+      const result = await service.getProfile('u1');
+      expect(result.hasPassword).toBe(false);
+    });
+  });
 });
