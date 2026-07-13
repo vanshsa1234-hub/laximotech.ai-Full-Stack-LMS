@@ -242,8 +242,25 @@ model Lesson {
   progress   LessonProgress[]
   comments   Comment[]
   codeSnippets SavedCode[]
+  documents  LessonDocument[]
 
   @@map("lessons")
+}
+
+// Optional, per-lesson downloadable material (notes, slides, PDFs, etc).
+// A lesson can have zero or many of these — fully independent of the video.
+model LessonDocument {
+  id        String   @id @default(cuid())
+  lessonId  String
+  title     String   // e.g. "Lecture Notes", "Slides"
+  fileUrl   String   // S3 key or local /uploads path
+  fileType  String   // pdf | ppt | pptx | doc | docx
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+
+  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@map("lesson_documents")
 }
 
 // ============================================================

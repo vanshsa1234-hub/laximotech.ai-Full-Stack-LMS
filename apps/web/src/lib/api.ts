@@ -54,6 +54,12 @@ export const coursesApi = {
     api.patch(`/courses/admin/lessons/${lessonId}`, data),
   upsertLessonQuiz: (lessonId: string, data: any) =>
     api.post(`/courses/admin/lessons/${lessonId}/quiz`, data),
+  addLessonDocument: (lessonId: string, data: { title: string; fileUrl: string; fileType: string; order?: number }) =>
+    api.post(`/courses/admin/lessons/${lessonId}/documents`, data),
+  updateLessonDocument: (documentId: string, data: Partial<{ title: string; fileUrl: string; fileType: string; order: number }>) =>
+    api.patch(`/courses/admin/lessons/documents/${documentId}`, data),
+  deleteLessonDocument: (documentId: string) =>
+    api.delete(`/courses/admin/lessons/documents/${documentId}`),
 };
 
 // ── Enrollments ──────────────────────────────────────────────

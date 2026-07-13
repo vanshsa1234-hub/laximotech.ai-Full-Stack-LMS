@@ -1,5 +1,5 @@
 // C:\Users\LENOVO\Downloads\laximotech(project)\laximotech7\apps\api\src\courses\courses.controller.ts
-import { Controller, Get, Post, Patch, Param, Query, Body, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Param, Query, Body, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { CoursesService }  from './courses.service';
 import { Public }          from '../auth/decorators/public.decorator';
@@ -66,6 +66,31 @@ export class CoursesController {
   @Post('admin/lessons/:lessonId/quiz')
   upsertLessonQuiz(@Param('lessonId') lessonId: string, @Body() body: any) {
     return this.courses.upsertLessonQuiz(lessonId, body);
+  }
+
+  // Optional per-lesson documents (notes/slides/PDFs/etc), managed from the admin panel.
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN, Role.INSTRUCTOR)
+  @Post('admin/lessons/:lessonId/documents')
+  addLessonDocument(@Param('lessonId') lessonId: string, @Body() body: any) {
+    return this.courses.addLessonDocument(lessonId, body);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN, Role.INSTRUCTOR)
+  @Patch('admin/lessons/documents/:documentId')
+  updateLessonDocument(@Param('documentId') documentId: string, @Body() body: any) {
+    return this.courses.updateLessonDocument(documentId, body);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN, Role.INSTRUCTOR)
+  @Delete('admin/lessons/documents/:documentId')
+  deleteLessonDocument(@Param('documentId') documentId: string) {
+    return this.courses.deleteLessonDocument(documentId);
   }
 
 

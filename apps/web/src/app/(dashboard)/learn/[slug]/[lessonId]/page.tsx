@@ -9,10 +9,11 @@ import {
   Play, Pause, Volume2, VolumeX, Maximize, Minimize,
   BookmarkPlus, ChevronLeft, CheckCircle, Circle,
   List, X, Clock, ChevronDown, Loader2, Lock, MessageSquare,
-  FileQuestion
+  FileQuestion, FileText
 } from 'lucide-react';
 import { AiStudyBuddy } from '@/components/ai/study-buddy';
 import { DiscussionSection } from '@/components/community/discussion-section';
+import { LessonDocuments } from '@/components/courses/lesson-documents';
 import { progressApi, lessonsApi } from '@/lib/api';
 import { useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
@@ -39,6 +40,7 @@ export default function LearnPage({ params }: { params: { slug: string; lessonId
   const [sidebarOpen,  setSidebarOpen]  = useState(true);
   const [speedMenu,    setSpeedMenu]    = useState(false);
   const [showDiscussion, setShowDiscussion] = useState(false);
+  const [showDocuments, setShowDocuments] = useState(false);
   const [videoError, setVideoError] = useState(false);
 
   // Fetch real lesson data + course curriculum
@@ -175,7 +177,13 @@ export default function LearnPage({ params }: { params: { slug: string; lessonId
           </div>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
-          <button onClick={() => setShowDiscussion(p => !p)}
+          {lesson.documents?.length > 0 && (
+            <button onClick={() => { setShowDocuments(p => !p); setShowDiscussion(false); }}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${showDocuments ? 'bg-brand-blue text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>
+              <FileText size={14} /> Documents
+            </button>
+          )}
+          <button onClick={() => { setShowDiscussion(p => !p); setShowDocuments(false); }}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${showDiscussion ? 'bg-brand-blue text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>
             💬 Discussion
           </button>
@@ -303,7 +311,15 @@ export default function LearnPage({ params }: { params: { slug: string; lessonId
               )}
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
-              <button onClick={() => setShowDiscussion(p => !p)}
+              {lesson.documents?.length > 0 && (
+                <button onClick={() => { setShowDocuments(p => !p); setShowDiscussion(false); }}
+                  className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold transition-colors ${
+                    showDocuments ? 'bg-brand-blue text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                  }`}>
+                  <FileText size={14} /> Documents
+                </button>
+              )}
+              <button onClick={() => { setShowDiscussion(p => !p); setShowDocuments(false); }}
                 className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold transition-colors ${
                   showDiscussion ? 'bg-brand-blue text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
                 }`}>
@@ -321,6 +337,17 @@ export default function LearnPage({ params }: { params: { slug: string; lessonId
               )}
             </div>
           </div>
+
+          <AnimatePresence>
+            {showDocuments && (
+              <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
+                className="overflow-hidden flex-shrink-0 max-h-80 overflow-y-auto bg-gray-950 border-t border-gray-800">
+                <div className="p-4">
+                  <LessonDocuments documents={lesson.documents ?? []} />
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           <AnimatePresence>
             {showDiscussion && (

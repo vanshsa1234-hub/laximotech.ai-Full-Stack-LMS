@@ -12,12 +12,21 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { Role } from '@prisma/client';
 
-const ALLOWED_FOLDERS = ['thumbnails', 'blog-covers', 'career-paths', 'avatars', 'videos', 'pdfs', 'certificate-bg'];
+const ALLOWED_FOLDERS = ['thumbnails', 'blog-covers', 'career-paths', 'avatars', 'videos', 'pdfs', 'certificate-bg', 'documents'];
 const MAX_SIZE_BYTES: Record<string, number> = {
-  videos: 300 * 1024 * 1024, // 300MB — real lesson videos
-  pdfs:   20  * 1024 * 1024, // 20MB
+  videos:    300 * 1024 * 1024, // 300MB — real lesson videos
+  pdfs:      20  * 1024 * 1024, // 20MB
+  documents: 20  * 1024 * 1024, // 20MB — lesson notes/slides (pdf/ppt/doc)
 };
 const DEFAULT_MAX_SIZE = 5 * 1024 * 1024; // 5MB — images
+// Optional per-lesson downloadable material: PDF, PowerPoint, or Word files.
+const DOCUMENT_MIME_TYPES = [
+  'application/pdf',
+  'application/vnd.ms-powerpoint',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+];
 
 @ApiTags('Storage')
 @ApiBearerAuth()
@@ -42,9 +51,11 @@ export class StorageController {
       const isVideo = file.mimetype.startsWith('video/');
       const isImage = file.mimetype.startsWith('image/');
       const isPdf   = file.mimetype === 'application/pdf';
+      const isDoc   = DOCUMENT_MIME_TYPES.includes(file.mimetype);
       if (folder === 'videos' && !isVideo) return cb(new BadRequestException('Please select a video file.'), false);
       if (folder === 'pdfs' && !isPdf) return cb(new BadRequestException('Please select a PDF file.'), false);
-      if (!folder || ALLOWED_FOLDERS.filter(f => f !== 'videos' && f !== 'pdfs').includes(folder)) {
+      if (folder === 'documents' && !isDoc) return cb(new BadRequestException('Please select a PDF, PPT, or Word document.'), false);
+      if (!folder || ALLOWED_FOLDERS.filter(f => !['videos', 'pdfs', 'documents'].includes(f)).includes(folder)) {
         if (!isImage) return cb(new BadRequestException('Please select an image file.'), false);
       }
       cb(null, true);

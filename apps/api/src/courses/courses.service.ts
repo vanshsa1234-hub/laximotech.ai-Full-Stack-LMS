@@ -123,6 +123,10 @@ export class CoursesService {
                 subtitleHiUrl: true, subtitleEnUrl: true,
                 starterCode: true, isPreview: true, isMandatory: true,
                 estimatedMinutes: true, videoDurationSec: true,
+                documents: {
+                  orderBy: { order: 'asc' },
+                  select: { id: true, title: true, fileUrl: true, fileType: true, order: true },
+                },
                 quiz: {
                   select: {
                     id: true, title: true, passingScore: true, isFinalExam: true,
@@ -183,7 +187,26 @@ export class CoursesService {
     });
   }
 
-  async upsertLessonQuiz(lessonId: string, data: {
+  // Admin: add a document (notes/slides/PDF/etc) to a lesson. Fully optional —
+  // a lesson can have zero, one, or many of these independent of its video.
+  async addLessonDocument(lessonId: string, data: { title: string; fileUrl: string; fileType: string; order?: number }) {
+    const lesson = await this.prisma.lesson.findUnique({ where: { id: lessonId } });
+    if (!lesson) throw new NotFoundException('Lesson not found.');
+    const order = data.order ?? (await this.prisma.lessonDocument.count({ where: { lessonId } }));
+    return this.prisma.lessonDocument.create({
+      data: { lessonId, title: data.title, fileUrl: data.fileUrl, fileType: data.fileType, order },
+    });
+  }
+
+  async updateLessonDocument(documentId: string, data: Partial<{ title: string; fileUrl: string; fileType: string; order: number }>) {
+    return this.prisma.lessonDocument.update({ where: { id: documentId }, data });
+  }
+
+  async deleteLessonDocument(documentId: string) {
+    return this.prisma.lessonDocument.delete({ where: { id: documentId } });
+  }
+
+async upsertLessonQuiz(lessonId: string, data: {
     title: string;
     passingScore?: number;
     isFinalExam?: boolean;

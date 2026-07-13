@@ -15,6 +15,10 @@ export class LessonsService {
         subtitleHiUrl: true, subtitleEnUrl: true,
         starterCode: true, isPreview: true, estimatedMinutes: true,
         videoDurationSec: true,
+        documents: {
+          orderBy: { order: 'asc' },
+          select: { id: true, title: true, fileUrl: true, fileType: true, order: true },
+        },
         section: {
           select: {
             id: true, title: true, order: true,
@@ -49,6 +53,11 @@ export class LessonsService {
     }
     if (lesson.subtitleEnUrl) {
       result.subtitleEnUrl = await this.storage.getViewUrl(lesson.subtitleEnUrl, 7200);
+    }
+    if (lesson.documents?.length) {
+      result.documents = await Promise.all(
+        lesson.documents.map(async (doc) => ({ ...doc, fileUrl: await this.storage.getViewUrl(doc.fileUrl, 7200) })),
+      );
     }
 
     // Get user progress for this lesson

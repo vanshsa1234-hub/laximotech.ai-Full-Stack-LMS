@@ -10,6 +10,7 @@ import { coursesApi } from '@/lib/api';
 import { useAdminInstructors, useCourseCertificateTemplate, useUpdateCourseCertificateTemplate, useResetCourseCertificateTemplate, useAdminSiteContent, useRegenerateCertificates } from '@/hooks/use-queries';
 import { ImageUpload } from '@/components/admin/image-upload';
 import { VideoUpload } from '@/components/admin/video-upload';
+import { DocumentManager } from '@/components/admin/document-manager';
 import { CertificateTemplateEditor } from '@/components/admin/certificate-template-editor';
 
 const CONTENT_TYPES = ['VIDEO', 'PDF', 'QUIZ', 'CODE', 'TEXT'];
@@ -38,6 +39,7 @@ const emptyLesson = (sectionId = '') => ({
   estimatedMinutes: 10,
   isPreview: false,
   isMandatory: true,
+  documents: [] as any[],
 });
 
 const emptyQuiz = () => ({
@@ -166,6 +168,7 @@ export default function CourseBuilderPage({ params }: { params: { id: string } }
       subtitleHiUrl: lesson.subtitleHiUrl ?? '',
       subtitleEnUrl: lesson.subtitleEnUrl ?? '',
       starterCode: lesson.starterCode ?? '',
+      documents: lesson.documents ?? [],
     });
     setQuizForm(lesson.quiz
       ? {
@@ -501,6 +504,15 @@ export default function CourseBuilderPage({ params }: { params: { id: string } }
                 <input value={lessonForm.pdfUrl} onChange={e => setLessonForm((p: any) => ({ ...p, pdfUrl: e.target.value }))}
                   className="admin-input" placeholder="Optional" />
               </Field>
+              {lessonForm.id ? (
+                <DocumentManager
+                  lessonId={lessonForm.id}
+                  documents={lessonForm.documents ?? []}
+                  onChange={docs => setLessonForm((p: any) => ({ ...p, documents: docs }))}
+                />
+              ) : (
+                <p className="text-xs text-gray-500 -mt-2">Save this lesson first to attach downloadable documents (notes, slides, etc).</p>
+              )}
               <Field label="Text Content">
                 <textarea value={lessonForm.textContent} onChange={e => setLessonForm((p: any) => ({ ...p, textContent: e.target.value }))}
                   rows={4} className="admin-input resize-none" placeholder="Optional lesson notes" />
