@@ -16,10 +16,6 @@ apps/api/uploads
 .env.*.local
 .env.production
 
-# Prisma
-apps/api/prisma/migrations/*.sql
-# (Keep migration files in git in production)
-
 # Logs
 *.log
 npm-debug.log*
