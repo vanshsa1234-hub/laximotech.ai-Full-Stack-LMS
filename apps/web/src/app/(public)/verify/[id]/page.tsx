@@ -86,21 +86,18 @@ export default function VerifyPage({ params }: { params: { id: string } }) {
                 <span className="text-white font-bold">✅ This certificate is VALID and AUTHENTIC</span>
               </div>
               <div className="p-8">
-                {/* Certificate display */}
-                <div className="bg-gradient-to-br from-brand-blue via-brand-blue-dark to-purple-900 rounded-2xl p-8 text-white text-center relative overflow-hidden mb-6">
-                  <div className="absolute inset-3 border border-white/20 rounded-xl pointer-events-none" />
-                  <div className="text-brand-orange text-xs font-bold uppercase tracking-widest mb-2">laximotech.ai</div>
-                  <div className="text-white/60 text-sm mb-4">Certificate of Completion</div>
-                  <div className="text-white/50 text-sm mb-2">This certifies that</div>
-                  <div className="font-serif font-bold text-3xl text-white mb-2">{result.holderName}</div>
-                  <div className="text-white/50 text-sm mb-2">has successfully completed</div>
-                  <div className="font-heading font-bold text-xl text-brand-orange mb-4">{result.courseTitle}</div>
-                  <div className="flex items-center justify-center gap-6 text-white/60 text-xs mt-4">
-                    {result.finalScore && <div>Score: <strong className="text-white">{result.finalScore}%</strong></div>}
-                    <div>Issued: <strong className="text-white">{result.issuedAt}</strong></div>
-                    <div>ID: <strong className="text-white font-mono">{result.certificateNo}</strong></div>
+                {/* The actual generated certificate PDF for this student — embedded
+                    directly, not a decorative recreation. */}
+                {result.pdfUrl ? (
+                  <div className="rounded-2xl overflow-hidden border border-gray-200 mb-6 bg-gray-50">
+                    <iframe src={result.pdfUrl} title="Certificate" className="w-full h-[480px]" />
                   </div>
-                </div>
+                ) : (
+                  <div className="rounded-2xl border-2 border-dashed border-gray-200 p-8 text-center mb-6">
+                    <Loader2 size={24} className="text-gray-300 mx-auto mb-2 animate-spin" />
+                    <p className="text-gray-500 text-sm">Certificate PDF is still being generated — refresh in a moment.</p>
+                  </div>
+                )}
 
                 {/* Details grid */}
                 <div className="grid grid-cols-2 gap-4 mb-6">
