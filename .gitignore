@@ -38,3 +38,5 @@ Thumbs.db
 # Test coverage
 coverage
 *.tsbuildinfo
+
+check.txt
