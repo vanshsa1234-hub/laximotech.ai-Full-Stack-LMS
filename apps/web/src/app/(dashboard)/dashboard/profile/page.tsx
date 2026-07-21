@@ -9,6 +9,7 @@ import { usersApi } from '@/lib/api';
 import { useProfile, useUserStats } from '@/hooks/use-queries';
 import { formatDate } from '@/lib/utils';
 import toast from 'react-hot-toast';
+import { StudentIdCard } from '@/components/profile/student-id-card';
 
 export default function ProfilePage() {
   const { data: session } = useSession();
@@ -70,9 +71,27 @@ export default function ProfilePage() {
   return (
     <main className="min-h-screen bg-brand-ice pt-6 pb-24 md:pb-6 px-4 sm:px-6 lg:px-8">
       <div className="max-w-2xl mx-auto">
-        <h1 className="font-heading font-bold text-gray-900 text-2xl mb-8 flex items-center gap-2">
+        <h1 className="font-heading font-bold text-gray-900 dark:text-gray-100 text-2xl mb-8 flex items-center gap-2">
           <User size={24} className="text-brand-blue" /> My Profile
         </h1>
+
+        {/* Digital Student ID card — a real 3D lanyard card carrying your
+            actual profile data, front and back. Drag it to spin, or use the
+            flip button. */}
+        {profile && (
+          <div className="mb-8">
+            <StudentIdCard
+              name={form.name || session?.user?.name || 'Student'}
+              email={session?.user?.email ?? ''}
+              photoUrl={session?.user?.image ?? null}
+              role={profile?.role}
+              joinedAt={profile?.createdAt}
+              studentId={`LXT-${String(profile.id).slice(-6).toUpperCase()}`}
+              coursesEnrolled={profile?._count?.enrollments ?? 0}
+              certificatesEarned={profile?._count?.certificates ?? 0}
+            />
+          </div>
+        )}
 
         {/* User Card — real stats, no placeholder text */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}

@@ -64,6 +64,58 @@ describe('OrdersService', () => {
         where: { id: 'u1' }, data: { xpPoints: { increment: 10 } },
       });
     });
+
+    it('increments usedCount for a valid coupon even in free-enrollment mode', async () => {
+      // Regression test: previously, a coupon code supplied while Razorpay
+      // keys were unconfigured was silently ignored — usedCount never moved,
+      // even though a real student had "used" it to enroll.
+      const service = await buildService({});
+      prisma.course.findUnique.mockResolvedValue({ id: 'c1', title: 'C', price: 399 });
+      prisma.enrollment.findUnique.mockResolvedValue(null);
+      prisma.lesson.findFirst.mockResolvedValue({ id: 'l1' });
+      prisma.enrollment.create.mockResolvedValue({ id: 'e1' });
+      prisma.user.update.mockResolvedValue({});
+      prisma.coupon.findFirst.mockResolvedValue({ id: 'coup1', discountPct: 100, maxUses: 5, usedCount: 0 });
+      prisma.coupon.update.mockResolvedValue({});
+
+      const result = await service.createOrder('u1', 'c1', 'dm123');
+
+      expect(result.freeEnrollment).toBe(true);
+      expect(prisma.coupon.findFirst).toHaveBeenCalledWith(expect.objectContaining({
+        where: expect.objectContaining({ code: 'DM123', isActive: true }),
+      }));
+      expect(prisma.coupon.update).toHaveBeenCalledWith({
+        where: { id: 'coup1' }, data: { usedCount: { increment: 1 } },
+      });
+    });
+
+    it('does not touch usedCount for an unknown coupon code in free-enrollment mode', async () => {
+      const service = await buildService({});
+      prisma.course.findUnique.mockResolvedValue({ id: 'c1', title: 'C', price: 399 });
+      prisma.enrollment.findUnique.mockResolvedValue(null);
+      prisma.lesson.findFirst.mockResolvedValue({ id: 'l1' });
+      prisma.enrollment.create.mockResolvedValue({ id: 'e1' });
+      prisma.user.update.mockResolvedValue({});
+      prisma.coupon.findFirst.mockResolvedValue(null);
+
+      await service.createOrder('u1', 'c1', 'BOGUS');
+
+      expect(prisma.coupon.update).not.toHaveBeenCalled();
+    });
+
+    it('does not touch usedCount for a coupon that has hit its usage limit, even in free-enrollment mode', async () => {
+      const service = await buildService({});
+      prisma.course.findUnique.mockResolvedValue({ id: 'c1', title: 'C', price: 399 });
+      prisma.enrollment.findUnique.mockResolvedValue(null);
+      prisma.lesson.findFirst.mockResolvedValue({ id: 'l1' });
+      prisma.enrollment.create.mockResolvedValue({ id: 'e1' });
+      prisma.user.update.mockResolvedValue({});
+      prisma.coupon.findFirst.mockResolvedValue({ id: 'coup1', discountPct: 100, maxUses: 5, usedCount: 5 });
+
+      await service.createOrder('u1', 'c1', 'DM123');
+
+      expect(prisma.coupon.update).not.toHaveBeenCalled();
+    });
   });
 
   describe('Razorpay mode (keys configured)', () => {

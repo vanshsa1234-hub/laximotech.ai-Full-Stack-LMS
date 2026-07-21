@@ -10,24 +10,28 @@
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Inter:wght@400;500;600&family=Playfair+Display:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
 :root {
-  --font-inter:     'Inter', sans-serif;
-  --font-poppins:   'Poppins', sans-serif;
-  --font-playfair:  'Playfair Display', serif;
+  --font-inter: 'Inter', sans-serif;
+  --font-poppins: 'Poppins', sans-serif;
+  --font-playfair: 'Playfair Display', serif;
   --font-jetbrains: 'JetBrains Mono', monospace;
 
   /* Brand tokens */
-  --brand-blue:        #1F4E79;
-  --brand-orange:      #FF6B00;
-  --brand-green:       #117A65;
-  --brand-ice:         #F0F8FF;
-  --brand-dark:        #1A1A2E;
+  --brand-blue: #1F4E79;
+  --brand-orange: #FF6B00;
+  --brand-green: #117A65;
+  --brand-ice: #F0F8FF;
+  --brand-dark: #1A1A2E;
 
   /* Scroll behavior */
   scroll-behavior: smooth;
 }
 
 /* ── Base Reset ──────────────────────────────────────────────── */
-* { box-sizing: border-box; margin: 0; padding: 0; }
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
 
 body {
   font-family: var(--font-inter);
@@ -38,18 +42,33 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-h1, h2, h3, h4, h5, h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
   font-family: var(--font-poppins);
 }
 
 /* ── Scrollbar ───────────────────────────────────────────────── */
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
 ::-webkit-scrollbar-thumb {
   background: #1F4E79;
   border-radius: 99px;
 }
-::-webkit-scrollbar-thumb:hover { background: #FF6B00; }
+
+::-webkit-scrollbar-thumb:hover {
+  background: #FF6B00;
+}
 
 /* ── Selection ───────────────────────────────────────────────── */
 ::selection {
@@ -64,96 +83,58 @@ h1, h2, h3, h4, h5, h6 {
 
   /* ── Buttons ─────────────────────────────────────────────── */
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2
-           bg-brand-orange text-white font-heading font-bold
-           px-6 py-3 rounded-full
-           shadow-orange hover:shadow-orange-lg
-           hover:bg-brand-orange-light
-           active:scale-95
-           transition-all duration-200
-           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange focus-visible:ring-offset-2;
+    @apply inline-flex items-center justify-center gap-2 bg-brand-orange text-white font-heading font-bold px-6 py-3 rounded-full shadow-orange hover:shadow-orange-lg hover:bg-brand-orange-light active:scale-95 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange focus-visible:ring-offset-2;
     min-height: 48px;
   }
 
   .btn-secondary {
-    @apply inline-flex items-center justify-center gap-2
-           bg-brand-blue text-white font-heading font-semibold
-           px-6 py-3 rounded-full
-           hover:bg-brand-blue-light
-           active:scale-95
-           transition-all duration-200;
+    @apply inline-flex items-center justify-center gap-2 bg-brand-blue text-white font-heading font-semibold px-6 py-3 rounded-full hover:bg-brand-blue-light active:scale-95 transition-all duration-200;
     min-height: 48px;
   }
 
   .btn-outline {
-    @apply inline-flex items-center justify-center gap-2
-           border-2 border-brand-orange text-brand-orange font-heading font-semibold
-           px-6 py-3 rounded-full
-           hover:bg-brand-orange hover:text-white
-           active:scale-95
-           transition-all duration-200;
+    @apply inline-flex items-center justify-center gap-2 border-2 border-brand-orange text-brand-orange font-heading font-semibold px-6 py-3 rounded-full hover:bg-brand-orange hover:text-white active:scale-95 transition-all duration-200;
     min-height: 48px;
   }
 
   .btn-ghost {
-    @apply inline-flex items-center justify-center gap-2
-           text-brand-blue font-semibold
-           px-4 py-2 rounded-lg
-           hover:bg-brand-blue/10
-           active:scale-95
-           transition-all duration-200;
+    @apply inline-flex items-center justify-center gap-2 text-brand-blue font-semibold px-4 py-2 rounded-lg hover:bg-brand-blue/10 active:scale-95 transition-all duration-200;
   }
 
   /* ── Cards ───────────────────────────────────────────────── */
   .card {
-    @apply bg-white rounded-2xl shadow-card
-           border border-gray-100
-           transition-all duration-300
-           hover:shadow-card-hover hover:-translate-y-1;
+    @apply bg-white rounded-2xl shadow-card border border-gray-100 transition-all duration-300 hover:shadow-card-hover hover:-translate-y-1;
   }
 
   .card-glass {
-    @apply rounded-2xl border border-white/20
-           backdrop-blur-md
-           shadow-glass;
+    @apply rounded-2xl border border-white/20 backdrop-blur-md shadow-glass;
     background: rgba(255, 255, 255, 0.08);
   }
 
   .card-glass-dark {
-    @apply rounded-2xl border border-white/10
-           backdrop-blur-md;
+    @apply rounded-2xl border border-white/10 backdrop-blur-md;
     background: rgba(0, 0, 0, 0.3);
-    box-shadow: 0 8px 32px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.08);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.08);
   }
 
   /* Course Card — with Rs 399 badge */
   .course-card {
-    @apply bg-white rounded-2xl shadow-card border border-gray-100
-           overflow-hidden
-           transition-all duration-300
-           hover:shadow-card-hover hover:-translate-y-2;
+    @apply bg-white rounded-2xl shadow-card border border-gray-100 overflow-hidden transition-all duration-300 hover:shadow-card-hover hover:-translate-y-2;
     transform-style: preserve-3d;
   }
 
   /* ── Price Badge ─────────────────────────────────────────── */
   .price-badge {
-    @apply inline-flex items-center gap-1
-           bg-brand-orange text-white
-           font-heading font-bold text-sm
-           px-3 py-1 rounded-full
-           shadow-orange;
+    @apply inline-flex items-center gap-1 bg-brand-orange text-white font-heading font-bold text-sm px-3 py-1 rounded-full shadow-orange;
   }
 
   /* ── Section Heading ─────────────────────────────────────── */
   .section-label {
-    @apply inline-block text-brand-orange font-heading font-semibold
-           text-sm tracking-widest uppercase
-           mb-3;
+    @apply inline-block text-brand-orange font-heading font-semibold text-sm tracking-widest uppercase mb-3;
   }
 
   .section-title {
-    @apply font-heading font-bold text-brand-dark text-h2
-           leading-tight;
+    @apply font-heading font-bold text-brand-dark text-h2 leading-tight;
   }
 
   .section-title span {
@@ -175,110 +156,129 @@ h1, h2, h3, h4, h5, h6 {
 
   /* ── Search Bar ──────────────────────────────────────────── */
   .search-input {
-    @apply w-full bg-white/10 backdrop-blur-sm
-           border border-white/20 text-white
-           placeholder:text-white/60
-           rounded-full px-5 py-3
-           outline-none
-           transition-all duration-300
-           focus:border-brand-orange focus:bg-white/15
-           focus:shadow-[0_0_0_3px_rgba(255,107,0,0.2)];
+    @apply w-full bg-white/10 backdrop-blur-sm border border-white/20 text-white placeholder:text-white/60 rounded-full px-5 py-3 outline-none transition-all duration-300 focus:border-brand-orange focus:bg-white/15 focus:shadow-[0_0_0_3px_rgba(255, 107, 0, 0.2)];
   }
 
   /* ── Progress Bar ────────────────────────────────────────── */
   .progress-bar {
     @apply h-2 bg-gray-200 rounded-full overflow-hidden;
   }
+
   .progress-bar-fill {
-    @apply h-full bg-brand-green rounded-full
-           transition-all duration-700 ease-out;
+    @apply h-full bg-brand-green rounded-full transition-all duration-700 ease-out;
   }
 
   /* ── XP / Badge ──────────────────────────────────────────── */
   .xp-badge {
-    @apply inline-flex items-center gap-1
-           bg-yellow-50 text-yellow-700
-           border border-yellow-200
-           text-xs font-semibold
-           px-2 py-0.5 rounded-full;
+    @apply inline-flex items-center gap-1 bg-yellow-50 text-yellow-700 border border-yellow-200 text-xs font-semibold px-2 py-0.5 rounded-full;
   }
 
   /* ── Skeleton Loader ─────────────────────────────────────── */
   .skeleton {
     @apply rounded-lg bg-gray-200 relative overflow-hidden;
   }
+
   .skeleton::after {
     content: '';
     @apply absolute inset-0;
-    background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.6) 50%, transparent 100%);
+    background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.6) 50%, transparent 100%);
     background-size: 200% 100%;
     animation: shimmer 1.5s linear infinite;
   }
 
   /* ── Floating Animation Delay Utilities ──────────────────── */
-  .delay-100  { animation-delay: 0.1s; }
-  .delay-200  { animation-delay: 0.2s; }
-  .delay-300  { animation-delay: 0.3s; }
-  .delay-400  { animation-delay: 0.4s; }
-  .delay-500  { animation-delay: 0.5s; }
-  .delay-700  { animation-delay: 0.7s; }
-  .delay-1000 { animation-delay: 1s; }
+  .delay-100 {
+    animation-delay: 0.1s;
+  }
+
+  .delay-200 {
+    animation-delay: 0.2s;
+  }
+
+  .delay-300 {
+    animation-delay: 0.3s;
+  }
+
+  .delay-400 {
+    animation-delay: 0.4s;
+  }
+
+  .delay-500 {
+    animation-delay: 0.5s;
+  }
+
+  .delay-700 {
+    animation-delay: 0.7s;
+  }
+
+  .delay-1000 {
+    animation-delay: 1s;
+  }
 
   /* ── Reveal on Scroll (works with IntersectionObserver) ───── */
   .reveal {
     @apply opacity-0 translate-y-8 transition-all duration-700;
   }
+
   .reveal.visible {
     @apply opacity-100 translate-y-0;
   }
+
   .reveal-left {
     @apply opacity-0 -translate-x-8 transition-all duration-700;
   }
+
   .reveal-left.visible {
     @apply opacity-100 translate-x-0;
   }
+
   .reveal-right {
     @apply opacity-0 translate-x-8 transition-all duration-700;
   }
+
   .reveal-right.visible {
     @apply opacity-100 translate-x-0;
   }
 
   /* ── Nav ─────────────────────────────────────────────────── */
   .nav-link {
-    @apply text-gray-700 font-medium text-sm
-           hover:text-brand-orange
-           transition-colors duration-200
-           relative;
+    @apply text-gray-700 font-medium text-sm hover:text-brand-orange transition-colors duration-200 relative;
   }
+
   .nav-link::after {
     content: '';
-    @apply absolute bottom-0 left-0 h-0.5 w-0
-           bg-brand-orange rounded-full
-           transition-all duration-200;
+    @apply absolute bottom-0 left-0 h-0.5 w-0 bg-brand-orange rounded-full transition-all duration-200;
   }
-  .nav-link:hover::after { @apply w-full; }
-  .nav-link.active { @apply text-brand-orange; }
-  .nav-link.active::after { @apply w-full; }
+
+  .nav-link:hover::after {
+    @apply w-full;
+  }
+
+  .nav-link.active {
+    @apply text-brand-orange;
+  }
+
+  .nav-link.active::after {
+    @apply w-full;
+  }
 
   /* ── Input Fields ────────────────────────────────────────── */
   .input {
-    @apply w-full border border-gray-200 rounded-xl px-4 py-3
-           text-brand-dark placeholder:text-gray-400
-           outline-none
-           transition-all duration-200
-           focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/20
-           bg-white;
+    @apply w-full border border-gray-200 rounded-xl px-4 py-3 text-brand-dark placeholder:text-gray-400 outline-none transition-all duration-200 focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/20 bg-white;
   }
 
   /* ── Star Rating ─────────────────────────────────────────── */
-  .star-filled  { @apply text-yellow-400; }
-  .star-empty   { @apply text-gray-300; }
+  .star-filled {
+    @apply text-yellow-400;
+  }
+
+  .star-empty {
+    @apply text-gray-300;
+  }
 
   /* ── Category Tag ─────────────────────────────────────────── */
   .category-tag {
-    @apply text-xs font-semibold px-3 py-1 rounded-full
-           bg-brand-blue/10 text-brand-blue;
+    @apply text-xs font-semibold px-3 py-1 rounded-full bg-brand-blue/10 text-brand-blue;
   }
 
   /* ── Hero Particle Canvas ────────────────────────────────── */
@@ -288,29 +288,29 @@ h1, h2, h3, h4, h5, h6 {
 
   /* ── Mobile Bottom Nav ───────────────────────────────────── */
   .bottom-nav {
-    @apply fixed bottom-0 left-0 right-0 z-50
-           bg-white border-t border-gray-100
-           flex items-center justify-around
-           px-4 py-2
-           md:hidden;
+    @apply fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-100 flex items-center justify-around px-4 py-2 md:hidden;
     padding-bottom: env(safe-area-inset-bottom);
   }
+
   .bottom-nav-item {
-    @apply flex flex-col items-center gap-0.5
-           text-gray-500 text-xs font-medium
-           transition-colors duration-200;
+    @apply flex flex-col items-center gap-0.5 text-gray-500 text-xs font-medium transition-colors duration-200;
     min-width: 44px;
     min-height: 44px;
     @apply justify-center;
   }
-  .bottom-nav-item.active { @apply text-brand-orange; }
+
+  .bottom-nav-item.active {
+    @apply text-brand-orange;
+  }
 }
 
 /* ================================================================
    UTILITY LAYER
    ================================================================ */
 @layer utilities {
-  .text-balance { text-wrap: balance; }
+  .text-balance {
+    text-wrap: balance;
+  }
 
   .bg-mesh {
     background-color: #0f1729;
@@ -319,6 +319,15 @@ h1, h2, h3, h4, h5, h6 {
       radial-gradient(at 80% 0%,  rgba(45,27,105,0.6) 0px, transparent 50%),
       radial-gradient(at 0%  50%, rgba(17,122,101,0.4) 0px, transparent 50%),
       radial-gradient(at 80% 80%, rgba(255,107,0,0.15) 0px, transparent 50%);
+  }
+
+  .dark .bg-mesh {
+    background-color: #0e1d20;
+    /* background-image:
+    radial-gradient(at 40% 20%, rgba(31,78,121,0.8) 0px, transparent 50%),
+    radial-gradient(at 80% 0%,  rgba(45,27,105,0.6) 0px, transparent 50%),
+    radial-gradient(at 0%  50%, rgba(17,122,101,0.4) 0px, transparent 50%),
+    radial-gradient(at 80% 80%, rgba(255,107,0,0.15) 0px, transparent 50%); */
   }
 
   .glass {
@@ -336,17 +345,230 @@ h1, h2, h3, h4, h5, h6 {
   }
 
   /* Stagger children animation delays */
-  .stagger > *:nth-child(1)  { animation-delay: 0.0s; }
-  .stagger > *:nth-child(2)  { animation-delay: 0.1s; }
-  .stagger > *:nth-child(3)  { animation-delay: 0.2s; }
-  .stagger > *:nth-child(4)  { animation-delay: 0.3s; }
-  .stagger > *:nth-child(5)  { animation-delay: 0.4s; }
-  .stagger > *:nth-child(6)  { animation-delay: 0.5s; }
+  .stagger>*:nth-child(1) {
+    animation-delay: 0.0s;
+  }
+
+  .stagger>*:nth-child(2) {
+    animation-delay: 0.1s;
+  }
+
+  .stagger>*:nth-child(3) {
+    animation-delay: 0.2s;
+  }
+
+  .stagger>*:nth-child(4) {
+    animation-delay: 0.3s;
+  }
+
+  .stagger>*:nth-child(5) {
+    animation-delay: 0.4s;
+  }
+
+  .stagger>*:nth-child(6) {
+    animation-delay: 0.5s;
+  }
 
   /* 3D tilt helper — controlled via JS transform */
-  .tilt-card { transform-style: preserve-3d; will-change: transform; }
+  .tilt-card {
+    transform-style: preserve-3d;
+    will-change: transform;
+  }
 
   /* Hide scrollbar but keep scrollable */
-  .no-scrollbar::-webkit-scrollbar { display: none; }
-  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+/* ================================================================
+   Dark Mode
+   ================================================================
+   The admin panel and the lesson video player are intentionally dark
+   in both themes (like a code editor) and are untouched here. This
+   section re-themes the light-surfaced areas — the marketing site,
+   navbar/footer, and the student dashboard shell — by overriding the
+   handful of recurring Tailwind utility classes those pages use for
+   backgrounds, text, and borders, plus the brand CSS variables that
+   the <body> tag reads directly. Because next-themes toggles the
+   `dark` class on <html>, everything below activates automatically. */
+
+.dark {
+  color-scheme: dark;
+  --brand-ice: #0B0F1A;
+  --brand-dark: #E5E7EB;
+}
+
+.dark body {
+  background-color: var(--brand-ice);
+  color: var(--brand-dark);
+}
+
+.dark ::selection {
+  background: rgba(255, 107, 0, 0.35);
+  color: #fff;
+}
+
+@layer utilities {
+
+  /* Page/card backgrounds */
+  .dark .bg-brand-ice {
+    background-color: #0B0F1A;
+  }
+
+  .dark .bg-white {
+    background-color: #12172A;
+  }
+
+  .dark .bg-gray-50 {
+    background-color: #161B2E;
+  }
+
+  .dark .bg-gray-100 {
+    background-color: #1B2136;
+  }
+
+  .dark .bg-gray-200 {
+    background-color: #232A42;
+  }
+
+  /* Body/heading text */
+  .dark .text-brand-dark {
+    color: #E5E7EB;
+  }
+
+  .dark .text-gray-900 {
+    color: #F3F4F6;
+  }
+
+  .dark .text-gray-800 {
+    color: #E5E7EB;
+  }
+
+  .dark .text-gray-700 {
+    color: #D1D5DB;
+  }
+
+  .dark .text-gray-600 {
+    color: #9CA3AF;
+  }
+
+  /* Muted/secondary text (captions, timestamps, placeholders) — these are
+     used constantly across every page, so low contrast here is the single
+     biggest "hard to read in dark mode" complaint. Nudged lighter within
+     the same gray family rather than changing hue. */
+  .dark .text-gray-500 {
+    color: #A6AEBB;
+  }
+
+  .dark .text-gray-400 {
+    color: #B7BFCC;
+  }
+
+  .dark ::placeholder {
+    color: #6B7280;
+  }
+
+  /* Borders + shadows */
+  .dark .border-gray-50 {
+    border-color: #1E2438;
+  }
+
+  .dark .border-gray-100 {
+    border-color: #232A42;
+  }
+
+  .dark .border-gray-200 {
+    border-color: #2B3350;
+  }
+
+  .dark .shadow-card,
+  .dark .shadow-card-hover {
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+  }
+
+  /* Skeleton loading shimmer needs a darker base in dark mode */
+  .dark .skeleton {
+    background-color: #1B2136;
+  }
+}
+
+/* ── Brand colors "shine" in dark mode ──────────────────────────
+   brand-blue (#1F4E79) and brand-green (#117A65) are deep, muted tones
+   chosen for a light background — on a dark background they read as dull
+   and low-contrast. Lifted to brighter, more saturated tones with a soft
+   glow (text-shadow) so headings/links/icons in brand colors actually
+   pop against the dark surface, like a light emitting from behind them.
+   brand-orange is already vivid, so it just gets the glow treatment. */
+.dark .text-brand-blue {
+  color: #5B9BD5;
+  text-shadow: 0 0 14px rgba(91, 155, 213, 0.45);
+}
+
+.dark .text-brand-green {
+  color: #34D8BE;
+  text-shadow: 0 0 14px rgba(52, 216, 190, 0.45);
+}
+
+.dark .text-brand-orange {
+  color: #FF9142;
+  text-shadow: 0 0 14px rgba(255, 145, 66, 0.45);
+}
+
+/* Icons drawn with these colors (lucide-react uses `stroke`/`fill`, not
+   `color`, but most icons in this codebase are colored via `text-*` and
+   inherit through `currentColor`) get the same glow automatically since
+   they sit inside elements using these text classes. Where an icon sets
+   its own fill directly, brighten + glow it the same way. */
+.dark svg.text-brand-blue,
+.dark .fill-brand-blue {
+  fill: #5B9BD5;
+  filter: drop-shadow(0 0 6px rgba(91, 155, 213, 0.5));
+}
+
+.dark svg.text-brand-orange,
+.dark .fill-brand-orange {
+  filter: drop-shadow(0 0 6px rgba(255, 145, 66, 0.5));
+}
+
+.dark svg.text-brand-green,
+.dark .fill-brand-green {
+  fill: #34D8BE;
+  filter: drop-shadow(0 0 6px rgba(52, 216, 190, 0.5));
+}
+
+/* Solid brand-color badges/buttons (bg-brand-blue, bg-brand-green) get a
+   brighter fill + matching glow shadow so they don't look muddy on dark. */
+.dark .bg-brand-blue {
+  background-color: #2B6CB0;
+  box-shadow: 0 0 20px rgba(43, 108, 176, 0.35);
+}
+
+.dark .bg-brand-green {
+  background-color: #14B8A0;
+  box-shadow: 0 0 20px rgba(20, 184, 160, 0.35);
+}
+
+.dark .bg-brand-orange {
+  box-shadow: 0 0 20px rgba(255, 107, 0, 0.4);
+}
+
+/* Borders in brand colors get a subtle matching glow too */
+.dark .border-brand-blue {
+  border-color: #5B9BD5;
+  box-shadow: 0 0 10px rgba(91, 155, 213, 0.3);
+}
+
+.dark .border-brand-orange {
+  box-shadow: 0 0 10px rgba(255, 107, 0, 0.3);
+}
+
+.dark .border-brand-green {
+  border-color: #34D8BE;
+  box-shadow: 0 0 10px rgba(52, 216, 190, 0.3);
 }

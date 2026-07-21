@@ -7,6 +7,7 @@ import { useSession } from 'next-auth/react';
 import { LayoutDashboard, BookOpen, Award, BarChart2, User, Settings, Home, Zap, Trophy } from 'lucide-react';
 import { useUserStats } from '@/hooks/use-queries';
 import { xpToLevel } from '@/lib/utils';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
 
 const navItems = [
   { href: '/dashboard',              icon: LayoutDashboard, label: 'Dashboard' },
@@ -84,7 +85,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           })}
         </nav>
 
-        <div className="px-3 mt-4 pt-4 border-t border-gray-50">
+        <div className="px-3 mt-4 pt-4 border-t border-gray-50 space-y-1">
+          <div className="flex items-center justify-between px-3 py-1.5">
+            <span className="text-sm text-gray-500">Theme</span>
+            <ThemeToggle />
+          </div>
           <Link href="/" className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-gray-500 hover:text-brand-orange hover:bg-gray-50 transition-all">
             <Home size={18} /> Back to site
           </Link>

@@ -45,7 +45,7 @@ export function TrustBar() {
   ];
 
   return (
-    <section className="bg-white border-y border-gray-100">
+    <section className="bg-white dark:bg-[#0B0F1A] border-y border-gray-100 dark:border-white/10">
       {/* Stats row */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
@@ -57,14 +57,14 @@ export function TrustBar() {
               <div className="font-heading font-bold text-brand-blue text-3xl md:text-4xl mb-1">
                 {isLoading ? '—' : st.value != null ? <Counter to={st.value} suffix={st.suffix} /> : 'New'}
               </div>
-              <div className="text-gray-500 text-sm">{st.label}</div>
+              <div className="text-gray-500 dark:text-gray-300 text-sm">{st.label}</div>
             </motion.div>
           ))}
         </div>
       </div>
 
       {/* Trust signals */}
-      <div className="border-t border-gray-50 bg-gray-50/50">
+      <div className="border-t border-gray-50 dark:border-white/10 bg-gray-50/50 dark:bg-white/[0.04]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {trust.map((t, i) => (
@@ -72,12 +72,12 @@ export function TrustBar() {
                 initial={{ opacity: 0 }} whileInView={{ opacity: 1 }}
                 viewport={{ once: true }} transition={{ delay: i * 0.08 }}
                 className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-brand-blue/10 flex items-center justify-center flex-shrink-0">
+                <div className="w-9 h-9 rounded-lg bg-brand-blue/10 dark:bg-brand-blue/20 flex items-center justify-center flex-shrink-0">
                   <t.icon size={16} className="text-brand-blue" />
                 </div>
                 <div>
-                  <div className="text-sm font-semibold text-gray-800">{t.text}</div>
-                  <div className="text-xs text-gray-500">{t.sub}</div>
+                  <div className="text-sm font-semibold text-gray-800 dark:text-gray-100">{t.text}</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-300">{t.sub}</div>
                 </div>
               </motion.div>
             ))}

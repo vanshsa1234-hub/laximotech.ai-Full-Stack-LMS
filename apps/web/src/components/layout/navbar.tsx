@@ -9,6 +9,7 @@ import {
   Search, Menu, X, ChevronDown, BookOpen, Brain,
   Database, Shield, Cpu, GraduationCap, LogOut, User, Settings,
 } from 'lucide-react';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
 
 const navLinks = [
   {
@@ -57,7 +58,7 @@ export function Navbar() {
         transition={{ duration: 0.5, ease: 'easeOut' }}
         className={`fixed top-0 left-0 right-0 z-[100] transition-all duration-300 ${
           scrolled
-            ? 'bg-white/90 backdrop-blur-md shadow-[0_2px_20px_rgba(0,0,0,0.08)] border-b border-gray-100'
+            ? 'bg-white/90 dark:bg-[#0B0F1A]/85 backdrop-blur-md shadow-[0_2px_20px_rgba(0,0,0,0.08)] dark:shadow-[0_2px_20px_rgba(0,0,0,0.5)] border-b border-gray-100 dark:border-gray-800'
             : 'bg-transparent'
         }`}
       >
@@ -74,7 +75,7 @@ export function Navbar() {
               </motion.div>
               <div>
                 <span className={`font-heading font-bold text-lg leading-none transition-colors ${
-                  scrolled ? 'text-brand-blue' : 'text-white'
+                  scrolled ? 'text-brand-blue dark:text-white' : 'text-white'
                 }`}>
                   laximotech
                 </span>
@@ -91,7 +92,7 @@ export function Navbar() {
                       onMouseEnter={() => setMegaOpen(true)}
                       onMouseLeave={() => setMegaOpen(false)}
                       className={`flex items-center gap-1 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                        scrolled ? 'text-gray-700 hover:text-brand-orange hover:bg-orange-50' : 'text-white/90 hover:text-white hover:bg-white/10'
+                        scrolled ? 'text-gray-700 dark:text-gray-200 hover:text-brand-orange hover:bg-orange-50 dark:hover:bg-white/5' : 'text-white/90 hover:text-white hover:bg-white/10'
                       }`}
                     >
                       {link.label}
@@ -113,7 +114,7 @@ export function Navbar() {
                     <Link
                       href={link.href}
                       className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                        scrolled ? 'text-gray-700 hover:text-brand-orange hover:bg-orange-50' : 'text-white/90 hover:text-white hover:bg-white/10'
+                        scrolled ? 'text-gray-700 dark:text-gray-200 hover:text-brand-orange hover:bg-orange-50 dark:hover:bg-white/5' : 'text-white/90 hover:text-white hover:bg-white/10'
                       }`}
                     >
                       {link.label}
@@ -172,13 +173,16 @@ export function Navbar() {
 
             {/* ── Right Actions ─────────────────────────── */}
             <div className="flex items-center gap-2">
+              {/* Theme toggle */}
+              <ThemeToggle className="hidden sm:inline-flex" />
+
               {/* Search */}
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => setSearchOpen(true)}
                 className={`p-2 rounded-lg transition-all ${
-                  scrolled ? 'text-gray-600 hover:bg-gray-100' : 'text-white/80 hover:bg-white/10'
+                  scrolled ? 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10' : 'text-white/80 hover:bg-white/10'
                 }`}
               >
                 <Search size={20} />
@@ -246,7 +250,7 @@ export function Navbar() {
                     whileTap={{ scale: 0.98 }}
                     onClick={() => signIn()}
                     className={`text-sm font-semibold px-4 py-2 rounded-full transition-all ${
-                      scrolled ? 'text-brand-blue hover:bg-brand-blue/10' : 'text-white hover:bg-white/10'
+                      scrolled ? 'text-brand-blue dark:text-white hover:bg-brand-blue/10 dark:hover:bg-white/10' : 'text-white hover:bg-white/10'
                     }`}
                   >
                     Log In
@@ -268,7 +272,7 @@ export function Navbar() {
                 whileTap={{ scale: 0.9 }}
                 onClick={() => setMobileOpen(p => !p)}
                 className={`lg:hidden p-2 rounded-lg transition-all ${
-                  scrolled ? 'text-gray-700 hover:bg-gray-100' : 'text-white hover:bg-white/10'
+                  scrolled ? 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/10' : 'text-white hover:bg-white/10'
                 }`}
               >
                 {mobileOpen ? <X size={22} /> : <Menu size={22} />}
@@ -288,6 +292,10 @@ export function Navbar() {
               className="lg:hidden bg-white border-t border-gray-100 overflow-hidden"
             >
               <div className="px-4 py-4 space-y-1">
+                <div className="flex items-center justify-between px-4 py-2 mb-1">
+                  <span className="text-sm font-medium text-gray-500">Theme</span>
+                  <ThemeToggle />
+                </div>
                 {navLinks.map((link) => (
                   <div key={link.label}>
                     <Link

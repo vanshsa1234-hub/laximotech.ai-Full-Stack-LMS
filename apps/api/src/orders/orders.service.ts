@@ -44,11 +44,35 @@ export class OrdersService {
     // This is intentionally honest — no fake "payment success" screen.
     // Once RAZORPAY_KEY_ID/SECRET are set in apps/api/.env, this path
     // is skipped and the real Razorpay checkout flow runs instead.
+    //
+    // A coupon code can still be supplied here (e.g. a 100%-off code, or
+    // just for tracking purposes) — it doesn't change the price since
+    // nothing is actually being charged, but its usedCount must still be
+    // incremented, or coupons silently never show real usage while
+    // payments are unconfigured.
     if (!this.paymentsEnabled) {
+      let appliedCouponId: string | undefined;
+      if (couponCode) {
+        const coupon = await this.prisma.coupon.findFirst({
+          where: {
+            code:     couponCode.toUpperCase(),
+            isActive: true,
+            AND: [{ OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }] }],
+          },
+        });
+        if (coupon) {
+          const underLimit = coupon.maxUses == null || coupon.usedCount < coupon.maxUses;
+          if (underLimit) appliedCouponId = coupon.id;
+        }
+      }
+
       const enrollment = await this.prisma.enrollment.create({
         data: { userId, courseId },
       });
       await this.prisma.user.update({ where: { id: userId }, data: { xpPoints: { increment: 10 } } });
+      if (appliedCouponId) {
+        await this.prisma.coupon.update({ where: { id: appliedCouponId }, data: { usedCount: { increment: 1 } } });
+      }
       return {
         freeEnrollment: true,
         enrollment,
