@@ -20,7 +20,9 @@
     "noFallthroughCasesInSwitch": true,
     "paths": {
       "@/*": ["src/*"]
-    }
+    },
+    "rootDir": "src"
   },
-  "exclude": ["node_modules", "dist"]
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "prisma/**/*", "**/*.spec.ts"]
 }
