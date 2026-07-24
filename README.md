@@ -137,6 +137,13 @@ npm run db:seed      # seed 25 courses, admin user, coupons, blog posts
 ```bash
 npm run dev
 ```
+Second time
+```bash
+Remove-Item -Recurse -Force apps\api\dist -ErrorAction SilentlyContinue
+Remove-Item -Force apps\api\tsconfig.tsbuildinfo -ErrorAction SilentlyContinue
+npm run dev 
+```
+
 This runs both apps in parallel via Turborepo:
 - **Frontend** → http://localhost:3000
 - **Backend API** → http://localhost:4000
@@ -274,7 +281,6 @@ The Prisma schema (`apps/api/prisma/schema.prisma`) models:
 1. Create a feature branch off `main`.
 2. Keep changes scoped to one feature per PR.
 3. Run `npm run lint && npm run type-check` before pushing.
-4. Never commit real `.env` / `.env.local` files — only `.env.example` should be tracked.
 
 ---
 
