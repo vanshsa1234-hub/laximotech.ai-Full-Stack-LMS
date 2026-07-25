@@ -2,6 +2,7 @@ import { Test } from '@nestjs/testing';
 import { BadRequestException } from '@nestjs/common';
 import { StorageController } from './storage.controller';
 import { StorageService } from './storage.service';
+import { EnrolledGuard } from '../auth/guards/enrolled.guard';
 
 jest.mock('fs', () => ({
   ...jest.requireActual('fs'),
@@ -28,7 +29,10 @@ describe('StorageController', () => {
     const moduleRef = await Test.createTestingModule({
       controllers: [StorageController],
       providers: [{ provide: StorageService, useValue: service }],
-    }).compile();
+    })
+      .overrideGuard(EnrolledGuard)
+      .useValue({ canActivate: () => true })
+      .compile();
     controller = moduleRef.get(StorageController);
     jest.clearAllMocks();
   });
