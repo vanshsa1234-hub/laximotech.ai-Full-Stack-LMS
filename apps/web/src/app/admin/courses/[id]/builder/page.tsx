@@ -4,7 +4,7 @@
 import { useMemo, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, BookOpen, Check, FileQuestion, Loader2, Plus, Save, Video, User, Mail, Award } from 'lucide-react';
+import { ArrowLeft, BookOpen, Check, FileQuestion, Loader2, Plus, Save, Video, User, Mail, Award, GitBranch } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { coursesApi } from '@/lib/api';
 import { useAdminInstructors, useCourseCertificateTemplate, useUpdateCourseCertificateTemplate, useResetCourseCertificateTemplate, useAdminSiteContent, useRegenerateCertificates } from '@/hooks/use-queries';
@@ -13,7 +13,12 @@ import { VideoUpload } from '@/components/admin/video-upload';
 import { DocumentManager } from '@/components/admin/document-manager';
 import { CertificateTemplateEditor } from '@/components/admin/certificate-template-editor';
 
-const CONTENT_TYPES = ['VIDEO', 'PDF', 'QUIZ', 'CODE', 'TEXT'];
+const CONTENT_TYPES = ['VIDEO', 'PDF', 'QUIZ', 'CODE', 'TEXT', 'INTERACTIVE_VIZ'];
+const VIZ_TYPES = [
+  { value: 'LINKED_LIST', label: 'Linked list' },
+  { value: 'STACK', label: 'Stack' },
+  { value: 'QUEUE', label: 'Queue' },
+];
 
 type QuestionForm = {
   question: string;
@@ -36,6 +41,7 @@ const emptyLesson = (sectionId = '') => ({
   subtitleHiUrl: '',
   subtitleEnUrl: '',
   starterCode: '',
+  vizType: '',
   estimatedMinutes: 10,
   isPreview: false,
   isMandatory: true,
@@ -168,6 +174,7 @@ export default function CourseBuilderPage({ params }: { params: { id: string } }
       subtitleHiUrl: lesson.subtitleHiUrl ?? '',
       subtitleEnUrl: lesson.subtitleEnUrl ?? '',
       starterCode: lesson.starterCode ?? '',
+      vizType: lesson.vizType ?? '',
       documents: lesson.documents ?? [],
     });
     setQuizForm(lesson.quiz
@@ -427,7 +434,9 @@ export default function CourseBuilderPage({ params }: { params: { id: string } }
                     }`}>
                     <div className="flex items-start gap-3">
                       <div className="mt-0.5">
-                        {lesson.contentType === 'VIDEO' ? <Video size={15} className="text-brand-orange" /> : <BookOpen size={15} className="text-gray-500" />}
+                        {lesson.contentType === 'VIDEO' ? <Video size={15} className="text-brand-orange" />
+                          : lesson.contentType === 'INTERACTIVE_VIZ' ? <GitBranch size={15} className="text-brand-blue" />
+                          : <BookOpen size={15} className="text-gray-500" />}
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="text-sm text-white truncate">{lesson.order}. {lesson.title}</div>
@@ -476,11 +485,27 @@ export default function CourseBuilderPage({ params }: { params: { id: string } }
                   {CONTENT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
               </Field>
-              <Field label="Video Duration Seconds">
-                <input type="number" value={lessonForm.videoDurationSec} onChange={e => setLessonForm((p: any) => ({ ...p, videoDurationSec: e.target.value }))}
-                  className="admin-input" placeholder="Optional" />
-              </Field>
+              {lessonForm.contentType === 'INTERACTIVE_VIZ' ? (
+                <Field label="Visualizer Type">
+                  <select value={lessonForm.vizType} onChange={e => setLessonForm((p: any) => ({ ...p, vizType: e.target.value }))}
+                    className="admin-input">
+                    <option value="">Select a structure…</option>
+                    {VIZ_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                  </select>
+                </Field>
+              ) : (
+                <Field label="Video Duration Seconds">
+                  <input type="number" value={lessonForm.videoDurationSec} onChange={e => setLessonForm((p: any) => ({ ...p, videoDurationSec: e.target.value }))}
+                    className="admin-input" placeholder="Optional" />
+                </Field>
+              )}
             </div>
+
+            {lessonForm.contentType === 'INTERACTIVE_VIZ' && (
+              <p className="text-gray-400 text-xs mt-2">
+                Students will get an interactive {VIZ_TYPES.find(t => t.value === lessonForm.vizType)?.label.toLowerCase() ?? 'data structure'} builder in place of the video player — no upload needed.
+              </p>
+            )}
 
             <div className="mt-4 space-y-4">
               <VideoUpload

@@ -14,7 +14,7 @@ export class LessonsService {
         videoUrl: true, pdfUrl: true, textContent: true,
         subtitleHiUrl: true, subtitleEnUrl: true,
         starterCode: true, isPreview: true, estimatedMinutes: true,
-        videoDurationSec: true,
+        videoDurationSec: true, vizType: true,
         documents: {
           orderBy: { order: 'asc' },
           select: { id: true, title: true, fileUrl: true, fileType: true, order: true },

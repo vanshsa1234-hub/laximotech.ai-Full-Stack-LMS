@@ -122,7 +122,7 @@ export class CoursesService {
                 videoUrl: true, pdfUrl: true, textContent: true,
                 subtitleHiUrl: true, subtitleEnUrl: true,
                 starterCode: true, isPreview: true, isMandatory: true,
-                estimatedMinutes: true, videoDurationSec: true,
+                estimatedMinutes: true, videoDurationSec: true, vizType: true,
                 documents: {
                   orderBy: { order: 'asc' },
                   select: { id: true, title: true, fileUrl: true, fileType: true, order: true },
@@ -283,6 +283,7 @@ async upsertLessonQuiz(lessonId: string, data: {
     set('subtitleHiUrl', data.subtitleHiUrl || null);
     set('subtitleEnUrl', data.subtitleEnUrl || null);
     set('starterCode', data.starterCode || null);
+    set('vizType', data.vizType || null);
     set('isPreview', data.isPreview === undefined ? undefined : Boolean(data.isPreview));
     set('isMandatory', data.isMandatory === undefined ? (partial ? undefined : true) : Boolean(data.isMandatory));
     set('estimatedMinutes', data.estimatedMinutes !== undefined && data.estimatedMinutes !== '' ? Number(data.estimatedMinutes) : null);

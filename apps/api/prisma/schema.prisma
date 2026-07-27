@@ -49,6 +49,7 @@ enum ContentType {
   QUIZ
   CODE
   TEXT
+  INTERACTIVE_VIZ
 }
 
 enum DemoRequestStatus {
@@ -291,6 +292,7 @@ model Lesson {
   subtitleHiUrl   String?     // Hindi .vtt file S3 key
   subtitleEnUrl   String?     // English .vtt file S3 key
   starterCode     String?     @db.Text // for code lessons
+  vizType         String?     // for INTERACTIVE_VIZ lessons: 'LINKED_LIST' | 'STACK' | 'QUEUE'
   isPreview       Boolean     @default(false) // free without login
   isMandatory     Boolean     @default(true)
   estimatedMinutes Int?
