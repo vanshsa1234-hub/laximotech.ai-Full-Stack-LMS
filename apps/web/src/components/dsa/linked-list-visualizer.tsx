@@ -3,11 +3,14 @@
 import { useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowRight, Plus, Trash2, RotateCcw, Play } from 'lucide-react';
+import { NEON, gridBackgroundStyle, neonBoxStyle, neonGlowFilter } from './dsa-theme';
 
 interface ListNode {
   id: number;
   value: number;
 }
+
+const COLOR = NEON.LINKED_LIST;
 
 const OpButton = ({ onClick, disabled, label, complexity, icon }: {
   onClick: () => void; disabled?: boolean; label: string; complexity: string; icon?: React.ReactNode;
@@ -15,11 +18,14 @@ const OpButton = ({ onClick, disabled, label, complexity, icon }: {
   <button
     onClick={onClick}
     disabled={disabled}
-    className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-200 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+    style={{ borderColor: `${COLOR}55` }}
+    className="flex items-center gap-1.5 text-xs font-semibold px-3.5 py-2 rounded-lg bg-black/60 border hover:bg-black/40 text-gray-100 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+    onMouseEnter={(e) => { if (!disabled) e.currentTarget.style.boxShadow = `0 0 12px ${COLOR}66`; }}
+    onMouseLeave={(e) => { e.currentTarget.style.boxShadow = 'none'; }}
   >
     {icon}
     {label}
-    <span className="text-[10px] font-mono text-gray-500">{complexity}</span>
+    <span className="text-[10px] font-mono" style={{ color: `${COLOR}aa` }}>{complexity}</span>
   </button>
 );
 
@@ -62,14 +68,13 @@ export function LinkedListVisualizer() {
   };
 
   return (
-    <div className="w-full h-full overflow-y-auto bg-gray-900 p-6">
-      <div className="max-w-3xl mx-auto">
-        <h3 className="text-white font-semibold text-sm mb-1">Singly linked list</h3>
-        <p className="text-gray-400 text-xs mb-4">
-          Each node stores a value and a pointer to the next node. Try the operations below and watch the pointers update.
-        </p>
+    <div className="w-full h-full overflow-y-auto" style={gridBackgroundStyle}>
+      <div className="max-w-4xl mx-auto p-6">
+        <h3 className="font-semibold text-sm mb-1" style={{ color: COLOR, textShadow: `0 0 10px ${COLOR}88` }}>
+          Singly Linked List
+        </h3>
 
-        <div className="flex flex-wrap gap-2 mb-6">
+        <div className="flex flex-wrap gap-2 mb-8">
           <OpButton onClick={insertHead} icon={<Plus size={13} />} label="Insert head" complexity="O(1)" disabled={traversing} />
           <OpButton onClick={insertTail} icon={<Plus size={13} />} label="Insert tail" complexity="O(n)" disabled={traversing} />
           <OpButton onClick={deleteHead} icon={<Trash2 size={13} />} label="Delete head" complexity="O(1)" disabled={traversing || nodes.length === 0} />
@@ -78,40 +83,49 @@ export function LinkedListVisualizer() {
           <OpButton onClick={clear} icon={<RotateCcw size={13} />} label="Clear" complexity="" disabled={traversing || nodes.length === 0} />
         </div>
 
-        <div className="bg-gray-950/50 border border-gray-800 rounded-2xl p-6 min-h-[160px] flex items-center overflow-x-auto">
+        <div
+          className="rounded-2xl p-10 min-h-[220px] flex items-center overflow-x-auto"
+          style={{ perspective: '1200px', border: '1px solid rgba(148,163,184,0.15)', background: 'rgba(0,0,0,0.35)' }}
+        >
           <span className="text-[11px] text-gray-500 font-mono mr-3 flex-shrink-0">head</span>
-          <ArrowRight size={14} className="text-gray-600 flex-shrink-0 mr-3" />
+          <ArrowRight size={14} className="text-gray-600 flex-shrink-0 mr-4" />
 
           {nodes.length === 0 ? (
             <span className="text-gray-600 text-sm font-mono">null</span>
           ) : (
-            <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-3 flex-wrap" style={{ transformStyle: 'preserve-3d' }}>
               <AnimatePresence initial={false}>
-                {nodes.map((n, i) => (
-                  <motion.div
-                    key={n.id}
-                    layout
-                    initial={{ opacity: 0, scale: 0.6 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.6 }}
-                    transition={{ duration: 0.25 }}
-                    className="flex items-center gap-2"
-                  >
-                    <div className={`w-12 h-12 rounded-lg border flex items-center justify-center font-mono text-sm font-semibold transition-colors ${
-                      highlight === n.id ? 'bg-brand-blue border-brand-blue text-white' : 'bg-gray-800 border-gray-700 text-gray-100'
-                    }`}>
-                      {n.value}
-                    </div>
-                    <ArrowRight size={14} className="text-gray-600" />
-                  </motion.div>
-                ))}
+                {nodes.map((n, i) => {
+                  const active = highlight === n.id;
+                  return (
+                    <motion.div
+                      key={n.id}
+                      layout
+                      initial={{ opacity: 0, scale: 0.5, rotateX: -30 }}
+                      animate={{ opacity: 1, scale: 1, rotateX: 0, y: [0, -3, 0] }}
+                      exit={{ opacity: 0, scale: 0.5, rotateX: 30 }}
+                      whileHover={{ rotateX: -10, rotateY: 8, scale: 1.06 }}
+                      transition={{ duration: 0.3, y: { duration: 2.6 + (i % 3) * 0.3, repeat: Infinity, ease: 'easeInOut' } }}
+                      style={{ transformStyle: 'preserve-3d' }}
+                      className="flex items-center gap-3"
+                    >
+                      <div
+                        className="w-14 h-14 rounded-xl border-2 flex items-center justify-center font-mono text-base font-bold transition-all duration-300"
+                        style={neonBoxStyle(COLOR, active)}
+                      >
+                        {n.value}
+                      </div>
+                      <ArrowRight size={16} style={{ color: COLOR, ...neonGlowFilter(COLOR) }} />
+                    </motion.div>
+                  );
+                })}
               </AnimatePresence>
               <span className="text-gray-600 text-sm font-mono">null</span>
             </div>
           )}
         </div>
 
-        <p className="text-gray-500 text-xs mt-4">
+        <p className="text-gray-500 text-xs mt-5">
           Notice "insert tail" and "delete tail" cost O(n) here — there's no pointer to the last node, so we have to walk
           the whole list to find it. A real-world list often keeps a <code className="text-gray-400">tail</code> pointer
           to make appends O(1).

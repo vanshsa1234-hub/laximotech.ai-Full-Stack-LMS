@@ -1,13 +1,20 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import dynamic from 'next/dynamic';
 import { ArrowDown, Plus, Trash2, RotateCcw, Eye } from 'lucide-react';
+import { NEON, gridBackgroundStyle } from './dsa-theme';
+import { NeonCube } from './three/neon-cube';
+
+const SceneShell = dynamic(() => import('./three/scene-shell').then(m => m.SceneShell), { ssr: false });
 
 interface StackItem {
   id: number;
   value: number;
 }
+
+const COLOR = NEON.STACK;
+const SPACING = 1.5;
 
 const OpButton = ({ onClick, disabled, label, complexity, icon }: {
   onClick: () => void; disabled?: boolean; label: string; complexity: string; icon?: React.ReactNode;
@@ -15,11 +22,14 @@ const OpButton = ({ onClick, disabled, label, complexity, icon }: {
   <button
     onClick={onClick}
     disabled={disabled}
-    className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-200 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+    style={{ borderColor: `${COLOR}55` }}
+    className="flex items-center gap-1.5 text-xs font-semibold px-3.5 py-2 rounded-lg bg-black/60 border hover:bg-black/40 text-gray-100 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+    onMouseEnter={(e) => { if (!disabled) e.currentTarget.style.boxShadow = `0 0 12px ${COLOR}66`; }}
+    onMouseLeave={(e) => { e.currentTarget.style.boxShadow = 'none'; }}
   >
     {icon}
     {label}
-    <span className="text-[10px] font-mono text-gray-500">{complexity}</span>
+    <span className="text-[10px] font-mono" style={{ color: `${COLOR}aa` }}>{complexity}</span>
   </button>
 );
 
@@ -46,61 +56,56 @@ export function StackVisualizer() {
   const clear = () => setItems([]);
 
   return (
-    <div className="w-full h-full overflow-y-auto bg-gray-900 p-6">
-      <div className="max-w-2xl mx-auto">
-        <h3 className="text-white font-semibold text-sm mb-1">Stack (LIFO)</h3>
-        <p className="text-gray-400 text-xs mb-4">
-          Last in, first out — you can only push onto the top and pop from the top, like a stack of plates.
+    <div className="w-full h-full overflow-y-auto flex flex-col" style={gridBackgroundStyle}>
+      <div className="max-w-3xl mx-auto w-full p-6 flex-shrink-0">
+        <h3 className="font-semibold text-sm mb-1" style={{ color: COLOR, textShadow: `0 0 10px ${COLOR}88` }}>
+          Stack (LIFO) — 3D
+        </h3>
+        <p className="text-gray-400 text-xs mb-5">
+          Last in, first out — you can only push onto the top and pop from the top, like a stack of glowing plates.
         </p>
 
-        <div className="flex flex-wrap gap-2 mb-6">
+        <div className="flex flex-wrap gap-2">
           <OpButton onClick={push} icon={<Plus size={13} />} label="Push" complexity="O(1)" />
           <OpButton onClick={pop} icon={<Trash2 size={13} />} label="Pop" complexity="O(1)" disabled={items.length === 0} />
           <OpButton onClick={peek} icon={<Eye size={13} />} label="Peek" complexity="O(1)" disabled={items.length === 0} />
           <OpButton onClick={clear} icon={<RotateCcw size={13} />} label="Clear" complexity="" disabled={items.length === 0} />
         </div>
-
-        <div className="bg-gray-950/50 border border-gray-800 rounded-2xl p-6 min-h-[320px] flex flex-col items-center justify-end">
-          {items.length === 0 ? (
-            <span className="text-gray-600 text-sm font-mono mb-auto mt-auto">empty stack</span>
-          ) : (
-            <div className="flex flex-col-reverse items-center gap-1.5">
-              <AnimatePresence initial={false}>
-                {items.map((item, i) => {
-                  const isTop = i === items.length - 1;
-                  return (
-                    <motion.div
-                      key={item.id}
-                      layout
-                      initial={{ opacity: 0, y: -20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -20 }}
-                      transition={{ duration: 0.2 }}
-                      className="flex items-center gap-3"
-                    >
-                      {isTop && (
-                        <span className={`text-[10px] font-mono transition-colors ${peeking ? 'text-brand-orange' : 'text-gray-500'}`}>
-                          top <ArrowDown size={11} className="inline -mt-0.5" />
-                        </span>
-                      )}
-                      <div className={`w-32 h-11 rounded-lg border flex items-center justify-center font-mono text-sm font-semibold transition-colors ${
-                        isTop && peeking ? 'bg-brand-orange border-brand-orange text-white' : isTop ? 'bg-brand-blue border-brand-blue text-white' : 'bg-gray-800 border-gray-700 text-gray-100'
-                      }`}>
-                        {item.value}
-                      </div>
-                    </motion.div>
-                  );
-                })}
-              </AnimatePresence>
-            </div>
-          )}
-        </div>
-
-        <p className="text-gray-500 text-xs mt-4">
-          Common real-world uses: undo history, the browser back button, and function call stacks (which is why deep
-          recursion can cause a "stack overflow").
-        </p>
       </div>
+
+      <div className="relative flex-1 min-h-[420px]">
+        {items.length === 0 && (
+          <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
+            <span className="text-gray-600 text-sm font-mono">empty stack</span>
+          </div>
+        )}
+        {items.length > 0 && (
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 pointer-events-none flex items-center gap-1 text-[11px] font-mono"
+            style={{ color: peeking ? COLOR : '#6b7280' }}>
+            top <ArrowDown size={12} />
+          </div>
+        )}
+        <SceneShell accent={COLOR} cameraPosition={[3, 1.5, 8]}>
+          {items.map((item, i) => {
+            const isTop = i === items.length - 1;
+            return (
+              <NeonCube
+                key={item.id}
+                position={[0, i * SPACING - ((items.length - 1) * SPACING) / 2, 0]}
+                color={isTop ? COLOR : '#64748b'}
+                label={item.value}
+                active={isTop && peeking}
+                floatPhase={i * 0.9}
+              />
+            );
+          })}
+        </SceneShell>
+      </div>
+
+      <p className="text-gray-500 text-xs p-6 pt-4 flex-shrink-0 max-w-3xl mx-auto w-full">
+        Common real-world uses: undo history, the browser back button, and function call stacks (which is why deep
+        recursion can cause a "stack overflow").
+      </p>
     </div>
   );
 }

@@ -23,9 +23,10 @@ const navLinks = [
       { icon: Shield,   label: 'Cybersecurity',          href: '/courses?cat=cybersecurity', badge: '' },
     ],
   },
-  { label: 'Career Paths', href: '/paths' },
-  { label: 'Blog',         href: '/blog' },
-  { label: 'Demo Class',   href: '/demo', highlight: true },
+  { label: 'Career Paths',   href: '/paths' },
+  { label: 'DSA Visualizer', href: '/dsa-visualizer' },
+  { label: 'Blog',           href: '/blog' },
+  { label: 'Demo Class',     href: '/demo', highlight: true },
 ];
 
 export function Navbar() {

@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { useSession } from 'next-auth/react';
-import { LayoutDashboard, BookOpen, Award, BarChart2, User, Settings, Home, Zap, Trophy, Users2 } from 'lucide-react';
+import { LayoutDashboard, BookOpen, Award, BarChart2, User, Settings, Home, Zap, Trophy, Users2, GitBranch } from 'lucide-react';
 import { useUserStats } from '@/hooks/use-queries';
 import { xpToLevel } from '@/lib/utils';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
@@ -13,6 +13,7 @@ const navItems = [
   { href: '/dashboard',              icon: LayoutDashboard, label: 'Dashboard' },
   { href: '/dashboard/my-courses',   icon: BookOpen,        label: 'My Courses' },
   { href: '/dashboard/community',    icon: Users2,          label: 'Community' },
+  { href: '/dsa-visualizer',         icon: GitBranch,       label: 'DSA Visualizer' },
   { href: '/dashboard/progress',     icon: BarChart2,       label: 'Progress' },
   { href: '/dashboard/certificates', icon: Award,           label: 'Certificates' },
   { href: '/dashboard/leaderboard',  icon: Trophy,          label: 'Leaderboard' },
