@@ -42,8 +42,6 @@ export function SceneShell({ children, accent, cameraPosition = [0, 2.4, 8] }: S
         minDistance={4}
         maxDistance={16}
         maxPolarAngle={Math.PI / 1.8}
-        autoRotate
-        autoRotateSpeed={0.5}
       />
 
       <EffectComposer>
