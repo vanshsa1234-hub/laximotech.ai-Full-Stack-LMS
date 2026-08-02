@@ -11,10 +11,15 @@ export interface LLStep {
   phantomValue?: number;       // value of the in-progress new node, if any (insert only)
   phantomLinkTo?: number | null; // committed index the phantom's "next" arrow should point to
   markDelete?: number | null;  // committed index currently marked for removal (delete only)
-  error?: string;              // set on the final step if the index was invalid
+  slow?: number | null;        // index of the `slow` pointer (find-middle / detect-cycle)
+  fast?: number | null;        // index of the `fast` pointer (find-middle / detect-cycle)
+  reversedUpto?: number | null; // index of `prev` while reversing — everything up to here has been flipped
+  rewireNext?: number | null;  // target index the current node's arrow should point to right now (reverse)
+  error?: string;              // set on the final step if the index/operation was invalid
   commit?: {                   // present only on the final, successful step
-    type: 'INSERT_AT_HEAD' | 'INSERT_AFTER' | 'DELETE_AT_HEAD' | 'DELETE_AFTER';
-    at: number;                // index to insert after / index being removed
+    type: 'INSERT_AT_HEAD' | 'INSERT_AFTER' | 'DELETE_AT_HEAD' | 'DELETE_AFTER'
+        | 'REVERSE' | 'FIND_MIDDLE' | 'CYCLE_FOUND' | 'NO_CYCLE';
+    at?: number;                // index to insert after / index being removed / index found
   };
 }
 
@@ -100,6 +105,148 @@ export function buildInsertSteps(listLength: number, index: number, value: numbe
   steps.push({ pseudoLine: 13, current: cur, phantomValue: value, phantomLinkTo: nextIdx, note: `current.next = newNode — spliced in right after index ${cur}.` });
   steps.push({ pseudoLine: 14, current: cur, phantomValue: value, note: 'Return head. Insertion complete!', commit: { type: 'INSERT_AFTER', at: cur } });
 
+  return steps;
+}
+
+export const REVERSE_PSEUDOCODE = [
+  'Set prev = NULL.',
+  'Set curr = head.',
+  'While curr != NULL:',
+  '   next = curr.next.',
+  '   curr.next = prev.',
+  '   prev = curr.',
+  '   curr = next.',
+  'Set head = prev.',
+  'Return head.',
+];
+
+export const FIND_MIDDLE_PSEUDOCODE = [
+  'Set slow = head.',
+  'Set fast = head.',
+  'While fast != NULL and fast.next != NULL:',
+  '   slow = slow.next.',
+  '   fast = fast.next.next.',
+  'slow is now the middle node.',
+  'Return slow.',
+];
+
+export const DETECT_CYCLE_PSEUDOCODE = [
+  'Set slow = head.',
+  'Set fast = head.',
+  'While fast != NULL and fast.next != NULL:',
+  '   slow = slow.next.',
+  '   fast = fast.next.next.',
+  '   if slow == fast: cycle found!',
+  'If loop ends with no meeting: no cycle.',
+];
+
+export function buildReverseSteps(listLength: number): LLStep[] {
+  const steps: LLStep[] = [];
+  const n = listLength;
+  if (n === 0) {
+    steps.push({ pseudoLine: 0, current: null, error: 'The list is empty — nothing to reverse.', note: 'head is NULL.' });
+    return steps;
+  }
+
+  steps.push({ pseudoLine: 0, current: null, note: 'prev = NULL — nothing behind us yet.' });
+  steps.push({ pseudoLine: 1, current: 0, note: 'curr = head — start at index 0.' });
+
+  let curr: number | null = 0;
+  let prev: number | null = null;
+
+  while (curr !== null) {
+    const currIdx: number = curr;
+    const originalNext: number | null = currIdx + 1 < n ? currIdx + 1 : null;
+    const oldPrev = prev; // what curr's pointer will flip to point at
+
+    steps.push({ pseudoLine: 2, current: currIdx, reversedUpto: oldPrev, rewireNext: originalNext, note: `curr (index ${currIdx}) is not NULL — keep going.` });
+    steps.push({ pseudoLine: 3, current: currIdx, reversedUpto: oldPrev, rewireNext: originalNext, note: `next = curr.next (${originalNext !== null ? `index ${originalNext}` : 'NULL'}) — save it before we overwrite curr.next.` });
+    steps.push({ pseudoLine: 4, current: currIdx, reversedUpto: oldPrev, rewireNext: oldPrev, note: 'curr.next = prev — pointer flipped to point backward.' });
+
+    prev = currIdx;
+    steps.push({ pseudoLine: 5, current: currIdx, reversedUpto: prev, rewireNext: oldPrev, note: `prev = curr — index ${currIdx} is now the front of the reversed section.` });
+
+    curr = originalNext;
+    steps.push({ pseudoLine: 6, current: curr, reversedUpto: prev, note: curr !== null ? `curr = next — move on to index ${curr}.` : 'curr = next — curr is now NULL, loop ends.' });
+  }
+
+  steps.push({ pseudoLine: 7, current: null, reversedUpto: prev, note: 'head = prev — the last node we flipped is the new head.' });
+  steps.push({ pseudoLine: 8, current: null, note: 'Return head. Reversal complete!', commit: { type: 'REVERSE' } });
+  return steps;
+}
+
+export function buildFindMiddleSteps(listLength: number): LLStep[] {
+  const steps: LLStep[] = [];
+  const n = listLength;
+  if (n === 0) {
+    steps.push({ pseudoLine: 0, current: null, error: 'The list is empty — there is no middle.', note: 'head is NULL.' });
+    return steps;
+  }
+
+  steps.push({ pseudoLine: 0, current: 0, slow: 0, note: 'slow = head (index 0).' });
+  steps.push({ pseudoLine: 1, current: 0, slow: 0, fast: 0, note: 'fast = head (index 0) too.' });
+
+  let slow = 0;
+  let fast = 0;
+  while (fast !== null && fast < n - 1) {
+    steps.push({ pseudoLine: 2, slow, fast, current: null, note: `Is fast (index ${fast}) not NULL and fast.next not NULL? Yes — keep going.` });
+    slow += 1;
+    steps.push({ pseudoLine: 3, slow, fast, current: null, note: `slow = slow.next → now at index ${slow}.` });
+    fast = fast + 2 <= n - 1 ? fast + 2 : n; // n signals "ran off the end"
+    steps.push({ pseudoLine: 4, slow, fast: fast < n ? fast : null, current: null, note: fast < n ? `fast = fast.next.next → now at index ${fast}.` : 'fast = fast.next.next → fast is now NULL.' });
+    if (fast >= n) break;
+  }
+
+  steps.push({ pseudoLine: 5, slow, fast: null, current: null, note: `slow stopped at index ${slow} — that's the middle node.` });
+  steps.push({ pseudoLine: 6, slow, current: null, note: `Return slow. The middle value is at index ${slow}.`, commit: { type: 'FIND_MIDDLE', at: slow } });
+  return steps;
+}
+
+export function buildDetectCycleSteps(listLength: number, cycleTarget: number | null): LLStep[] {
+  const steps: LLStep[] = [];
+  const n = listLength;
+  if (n === 0) {
+    steps.push({ pseudoLine: 0, current: null, error: 'The list is empty.', note: 'head is NULL.' });
+    return steps;
+  }
+
+  // Simulate the "next" pointer as a simple function so a cycle can be
+  // demonstrated without changing the real (acyclic) committed list.
+  const nextOf = (i: number): number | null => (i + 1 < n ? i + 1 : cycleTarget);
+
+  steps.push({ pseudoLine: 0, current: 0, slow: 0, note: 'slow = head (index 0).' });
+  steps.push({ pseudoLine: 1, current: 0, slow: 0, fast: 0, note: 'fast = head (index 0) too.' });
+
+  let slow = 0;
+  let fast = 0;
+  const maxIterations = n * 3 + 5; // safety cap — a real cycle would loop forever otherwise
+  for (let iter = 0; iter < maxIterations; iter++) {
+    const fastNext1 = nextOf(fast);
+    if (fastNext1 === null) {
+      steps.push({ pseudoLine: 2, slow, fast: null, current: null, note: 'fast (or fast.next) is NULL — reached the end.' });
+      steps.push({ pseudoLine: 6, slow, fast: null, current: null, note: 'The loop ended without slow and fast ever meeting — no cycle here.', commit: { type: 'NO_CYCLE' } });
+      return steps;
+    }
+    const fastNext2 = nextOf(fastNext1);
+    if (fastNext2 === null) {
+      steps.push({ pseudoLine: 2, slow, fast: fastNext1, current: null, note: 'fast.next.next is NULL — reached the end.' });
+      steps.push({ pseudoLine: 6, slow, fast: fastNext1, current: null, note: 'The loop ended without slow and fast ever meeting — no cycle here.', commit: { type: 'NO_CYCLE' } });
+      return steps;
+    }
+    steps.push({ pseudoLine: 2, slow, fast, current: null, note: `Is fast (index ${fast}) and fast.next both non-NULL? Yes — keep going.` });
+    slow = nextOf(slow) ?? slow;
+    steps.push({ pseudoLine: 3, slow, fast, current: null, note: `slow = slow.next → now at index ${slow}.` });
+    fast = fastNext2;
+    steps.push({ pseudoLine: 4, slow, fast, current: null, note: `fast = fast.next.next → now at index ${fast}.` });
+
+    if (slow === fast) {
+      steps.push({ pseudoLine: 5, slow, fast, current: null, note: `slow and fast are both at index ${slow} — they met! A cycle exists.`, commit: { type: 'CYCLE_FOUND', at: slow } });
+      return steps;
+    }
+    steps.push({ pseudoLine: 5, slow, fast, current: null, note: 'slow != fast — not met yet, keep looping.' });
+  }
+
+  steps.push({ pseudoLine: 6, slow, fast, current: null, error: 'Safety limit reached.', note: 'Stopped as a precaution — this should not normally happen.' });
   return steps;
 }
 
