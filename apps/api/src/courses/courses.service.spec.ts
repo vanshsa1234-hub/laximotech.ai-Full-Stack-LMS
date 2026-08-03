@@ -2,10 +2,12 @@ import { Test } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
 import { CoursesService } from './courses.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { RagService } from '../ai/rag/rag.service';
 
 describe('CoursesService', () => {
   let service: CoursesService;
   let prisma: any;
+  let rag: any;
 
   beforeEach(async () => {
     prisma = {
@@ -18,8 +20,13 @@ describe('CoursesService', () => {
       quizAnswerRecord: { deleteMany: jest.fn() },
       $transaction: jest.fn(),
     };
+    rag = {
+      ingestLessonNotes: jest.fn().mockResolvedValue(undefined),
+      ingestLessonDocument: jest.fn().mockResolvedValue(undefined),
+      deleteChunksForDocument: jest.fn().mockResolvedValue(undefined),
+    };
     const moduleRef = await Test.createTestingModule({
-      providers: [CoursesService, { provide: PrismaService, useValue: prisma }],
+      providers: [CoursesService, { provide: PrismaService, useValue: prisma }, { provide: RagService, useValue: rag }],
     }).compile();
     service = moduleRef.get(CoursesService);
   });

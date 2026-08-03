@@ -5,6 +5,7 @@ import * as mammoth from 'mammoth';
 // and this project doesn't have esModuleInterop enabled, so a normal
 // `import pdfParse from 'pdf-parse'` resolves to undefined at runtime.
 // require() sidesteps that entirely.
+// eslint-disable-next-line @typescript-eslint/no-var-requires
 const pdfParse = require('pdf-parse');
 
 @Injectable()

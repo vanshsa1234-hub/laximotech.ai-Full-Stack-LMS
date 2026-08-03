@@ -3,6 +3,7 @@ import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AiService } from './ai.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { RagService } from './rag/rag.service';
 
 // Used only by the "streamCompletion — with API key configured" suite below.
 // Left unconfigured (no return value) here; each test in that suite sets
@@ -56,6 +57,7 @@ describe('AiService', () => {
         // No API key configured → client is null, streamCompletion short-circuits
         // safely with an error message instead of calling a real API.
         { provide: ConfigService, useValue: { get: jest.fn().mockReturnValue(undefined) } },
+        { provide: RagService, useValue: { retrieveContext: jest.fn().mockResolvedValue([]) } },
       ],
     }).compile();
 
@@ -215,6 +217,7 @@ describe('AiService — streamCompletion with API key configured', () => {
         AiService,
         { provide: PrismaService, useValue: prisma },
         { provide: ConfigService, useValue: { get: jest.fn().mockReturnValue('fake-api-key') } },
+        { provide: RagService, useValue: { retrieveContext: jest.fn().mockResolvedValue([]) } },
       ],
     }).compile();
 

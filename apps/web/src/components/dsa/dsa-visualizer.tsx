@@ -1,5 +1,7 @@
 'use client';
 
+import { StackVisualizer } from './stack-visualizer';
+import { QueueVisualizer } from './queue-visualizer';
 import { useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { Plus, Trash2, RotateCcw, Play } from 'lucide-react';
@@ -130,4 +132,16 @@ export function LinkedListVisualizer() {
       </p>
     </div>
   );
+}
+
+export function DsaVisualizer({ vizType }: { vizType?: string | null }) {
+  switch (vizType) {
+    case 'STACK':
+      return <StackVisualizer />;
+    case 'QUEUE':
+      return <QueueVisualizer />;
+    case 'LINKED_LIST':
+    default:
+      return <LinkedListVisualizer />;
+  }
 }
