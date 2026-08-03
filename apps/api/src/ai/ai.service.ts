@@ -1,6 +1,7 @@
 import { Injectable, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
+import { RagService }    from './rag/rag.service';
 import { Response }      from 'express';
 import OpenAI from 'openai';
 
@@ -11,7 +12,7 @@ export class AiService {
   private client: OpenAI | null = null;
   private model: string;
 
-  constructor(private config: ConfigService, private prisma: PrismaService) {
+  constructor(private config: ConfigService, private prisma: PrismaService, private rag: RagService) {
     const apiKey = config.get<string>('OPENROUTER_API_KEY');
     this.model = config.get<string>('OPENROUTER_MODEL') ?? 'openai/gpt-4o-mini';
     if (apiKey) {
@@ -117,7 +118,23 @@ export class AiService {
           if (!enrollment) throw new ForbiddenException('Please enroll in this course to use the AI Study Buddy here.');
         }
         lessonContext = `\nCurrent lesson: "${lesson.title}" in section "${lesson.section.title}"`;
-        if (lesson.textContent) lessonContext += `\nLesson notes: ${lesson.textContent.slice(0, 800)}`;
+
+        // RAG: retrieve the chunks (from the lesson's PDF/notes) most
+        // relevant to the student's actual question, instead of blindly
+        // truncating the notes field to the first 800 characters.
+        const userQuery = messages[messages.length - 1]?.content ?? '';
+        const chunks = await this.rag.retrieveContext(lessonId, courseId, userQuery);
+        if (chunks.length > 0) {
+          const contextBlock = chunks
+            .map((c, i) => `[Excerpt ${i + 1} — from lesson ${c.source === 'pdf' ? 'PDF' : 'notes'}]\n${c.text}`)
+            .join('\n\n');
+          lessonContext += `\n\nRelevant material for this question:\n${contextBlock}`;
+        } else if (lesson.textContent) {
+          // Nothing ingested yet for this lesson (e.g. RAG hasn't caught up
+          // after a fresh upload) — fall back to a short raw excerpt so the
+          // assistant still has *something* rather than nothing.
+          lessonContext += `\nLesson notes: ${lesson.textContent.slice(0, 800)}`;
+        }
       }
     }
 

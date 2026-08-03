@@ -1,11 +1,13 @@
-// C:\Users\LENOVO\Downloads\laximotech(project)\laximotech7\apps\api\src\courses\courses.service.ts
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { RagService } from '../ai/rag/rag.service';
 import { ContentType, CourseCategory, CourseLevel, Prisma } from '@prisma/client';
 
 @Injectable()
 export class CoursesService {
-  constructor(private prisma: PrismaService) {}
+  private readonly logger = new Logger(CoursesService.name);
+
+  constructor(private prisma: PrismaService, private rag: RagService) {}
 
   private courseSelect = {
     id: true, slug: true, title: true, shortDesc: true, description: true,
@@ -176,37 +178,67 @@ export class CoursesService {
       include: { quiz: { include: { questions: { orderBy: { order: 'asc' } } } } },
     });
     await this.recalcTotalLessons(section.courseId);
+    // Fire-and-forget: chunk + embed the notes for the Study Buddy RAG index.
+    // Not awaited so lesson creation in the admin UI stays fast.
+    this.rag.ingestLessonNotes(lesson.id, section.courseId, lesson.textContent)
+      .catch(err => this.logger.error(`RAG ingestion failed for new lesson ${lesson.id}:`, err));
     return lesson;
   }
 
   async updateLesson(lessonId: string, data: any) {
-    return this.prisma.lesson.update({
+    const lesson = await this.prisma.lesson.update({
       where: { id: lessonId },
       data: this.lessonPayload(data, true),
       include: { quiz: { include: { questions: { orderBy: { order: 'asc' } } } } },
     });
+    if (data.textContent !== undefined) {
+      const section = await this.prisma.section.findUnique({ where: { id: lesson.sectionId }, select: { courseId: true } });
+      if (section) {
+        this.rag.ingestLessonNotes(lessonId, section.courseId, lesson.textContent)
+          .catch(err => this.logger.error(`RAG ingestion failed for lesson ${lessonId}:`, err));
+      }
+    }
+    return lesson;
   }
 
   // Admin: add a document (notes/slides/PDF/etc) to a lesson. Fully optional —
   // a lesson can have zero, one, or many of these independent of its video.
   async addLessonDocument(lessonId: string, data: { title: string; fileUrl: string; fileType: string; order?: number }) {
-    const lesson = await this.prisma.lesson.findUnique({ where: { id: lessonId } });
+    const lesson = await this.prisma.lesson.findUnique({ where: { id: lessonId }, select: { sectionId: true } });
     if (!lesson) throw new NotFoundException('Lesson not found.');
     const order = data.order ?? (await this.prisma.lessonDocument.count({ where: { lessonId } }));
-    return this.prisma.lessonDocument.create({
+    const doc = await this.prisma.lessonDocument.create({
       data: { lessonId, title: data.title, fileUrl: data.fileUrl, fileType: data.fileType, order },
     });
+    // Fire-and-forget: extract text (PDF/DOCX) + chunk + embed for RAG.
+    const section = await this.prisma.section.findUnique({ where: { id: lesson.sectionId }, select: { courseId: true } });
+    if (section) {
+      this.rag.ingestLessonDocument(doc.id, lessonId, section.courseId, data.fileUrl, data.fileType)
+        .catch(err => this.logger.error(`RAG ingestion failed for document ${doc.id}:`, err));
+    }
+    return doc;
   }
 
   async updateLessonDocument(documentId: string, data: Partial<{ title: string; fileUrl: string; fileType: string; order: number }>) {
-    return this.prisma.lessonDocument.update({ where: { id: documentId }, data });
+    const doc = await this.prisma.lessonDocument.update({ where: { id: documentId }, data });
+    // Replaced file → re-ingest with the new content.
+    if (data.fileUrl !== undefined || data.fileType !== undefined) {
+      const lesson = await this.prisma.lesson.findUnique({ where: { id: doc.lessonId }, select: { sectionId: true } });
+      const section = lesson && await this.prisma.section.findUnique({ where: { id: lesson.sectionId }, select: { courseId: true } });
+      if (section) {
+        this.rag.ingestLessonDocument(doc.id, doc.lessonId, section.courseId, doc.fileUrl, doc.fileType)
+          .catch(err => this.logger.error(`RAG re-ingestion failed for document ${doc.id}:`, err));
+      }
+    }
+    return doc;
   }
 
   async deleteLessonDocument(documentId: string) {
+    this.rag.deleteChunksForDocument(documentId).catch(err => this.logger.error(`RAG cleanup failed for document ${documentId}:`, err));
     return this.prisma.lessonDocument.delete({ where: { id: documentId } });
   }
 
-async upsertLessonQuiz(lessonId: string, data: {
+  async upsertLessonQuiz(lessonId: string, data: {
     title: string;
     passingScore?: number;
     isFinalExam?: boolean;

@@ -4,12 +4,14 @@
 // ============================================================
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [vector]
 }
 
 // ============================================================
@@ -324,7 +326,28 @@ model LessonDocument {
 
   @@map("lesson_documents")
 }
+// RAG index for the AI Study Buddy: chunked + embedded lesson content
+// (notes and/or PDF/DOCX documents), retrieved by cosine similarity at
+// chat time instead of stuffing raw text into the prompt. The `embedding`
+// column itself is created via raw SQL in the migration (Prisma's
+// Unsupported() type here is documentation-only — all reads/writes go
+// through $queryRaw/$executeRaw in RagService since Prisma Client can't
+// natively handle the pgvector type yet).
+model LessonChunk {
+  id          String   @id @default(cuid())
+  lessonId    String
+  courseId    String
+  sourceType  String   // 'notes' | 'pdf'
+  sourceDocId String?  // LessonDocument.id when sourceType = 'pdf', else null
+  content     String   @db.Text
+  embedding   Unsupported("vector(384)")
+  chunkIndex  Int
+  createdAt   DateTime @default(now())
 
+  @@index([lessonId])
+  @@index([courseId])
+  @@map("lesson_chunks")
+}
 // ============================================================
 // ENROLLMENTS & PROGRESS
 // ============================================================

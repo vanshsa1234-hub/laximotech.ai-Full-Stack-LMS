@@ -8,8 +8,9 @@ import {
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { v4 as uuid } from 'uuid';
-import { mkdirSync, writeFileSync } from 'fs';
+import { mkdirSync, writeFileSync, readFileSync } from 'fs';
 import { join } from 'path';
+import type { Readable } from 'stream';
 
 @Injectable()
 export class StorageService {
@@ -104,6 +105,23 @@ export class StorageService {
     const key = `${folder}/${filename}`;
     await this.uploadBuffer(key, buffer, contentType);
     return key;
+  }
+
+  // Reads raw file bytes given either a local '/uploads/...' path (or full
+  // 'http://localhost:PORT/uploads/...' URL) or an S3 key. Used by RAG
+  // ingestion to pull PDF/DOCX content off disk for text extraction.
+  async getFileBuffer(key: string): Promise<Buffer> {
+    const localMatch = key.match(/\/uploads\/(.+)$/);
+    if (localMatch) {
+      const filePath = join(__dirname, '..', '..', 'uploads', localMatch[1]);
+      return readFileSync(filePath);
+    }
+    if (!this.enabled) throw new Error('Storage not configured — cannot fetch file for RAG ingestion.');
+    const response = await this.s3.send(new GetObjectCommand({ Bucket: this.bucket, Key: key }));
+    const stream = response.Body as Readable;
+    const chunks: Buffer[] = [];
+    for await (const chunk of stream) chunks.push(Buffer.from(chunk));
+    return Buffer.concat(chunks);
   }
 
   async deleteFile(key: string): Promise<void> {
