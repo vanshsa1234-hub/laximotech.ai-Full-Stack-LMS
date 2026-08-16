@@ -208,4 +208,58 @@ Rules:
       select:  { id: true, role: true, content: true, createdAt: true },
     });
   }
+
+  // Non-streaming, structured completion used to auto-generate section
+  // quizzes. Separate from streamCompletion (SSE, chat-shaped) since this
+  // needs a single parsed JSON object back, not a token stream.
+  async generateQuizQuestions(
+    quizTitle: string,
+    courseTitle: string,
+    material: string,
+    count = 10,
+  ): Promise<{ question: string; options: string[]; correctIndex: number; explanation: string }[]> {
+    if (!this.client) {
+      throw new Error('AI quiz generation is not configured on this server (OPENROUTER_API_KEY missing).');
+    }
+
+    const systemPrompt = `You are an expert instructional designer writing a multiple-choice quiz for an online course on laximotech.ai.
+
+Generate exactly ${count} multiple-choice questions testing understanding of the course material provided below. The quiz is titled "${quizTitle}" and covers everything a student should know up to this point in the course "${courseTitle}".
+
+Rules:
+1. Each question must have exactly 4 options with only ONE correct answer.
+2. Vary difficulty: mix recall, application, and conceptual questions.
+3. Base every question strictly on the material provided — never invent facts it doesn't cover.
+4. Include a short 1-2 sentence explanation for why the correct answer is right.
+5. Respond with ONLY valid JSON, no markdown fences, no preamble, in exactly this shape:
+{"questions":[{"question":"...","options":["...","...","...","..."],"correctIndex":0,"explanation":"..."}]}`;
+
+    const response = await this.client.chat.completions.create({
+      model: this.model,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: `Course material covered so far:\n\n${material.slice(0, 20000)}` },
+      ],
+      max_tokens: 4000,
+      response_format: { type: 'json_object' },
+    });
+
+    let parsed: any;
+    try {
+      parsed = JSON.parse(response.choices[0]?.message?.content ?? '{}');
+    } catch {
+      throw new Error('AI returned invalid JSON for quiz generation.');
+    }
+
+    const questions = Array.isArray(parsed.questions) ? parsed.questions : [];
+    return questions
+      .filter((q: any) => q?.question && Array.isArray(q.options) && q.options.length === 4 && typeof q.correctIndex === 'number')
+      .slice(0, count)
+      .map((q: any) => ({
+        question: String(q.question),
+        options: q.options.map(String),
+        correctIndex: q.correctIndex,
+        explanation: q.explanation ? String(q.explanation) : '',
+      }));
+  }
 }

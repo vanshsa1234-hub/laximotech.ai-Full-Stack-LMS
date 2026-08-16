@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { StorageService } from '../../storage/storage.service';
 import { EmbeddingsService } from './embeddings.service';
@@ -92,5 +93,46 @@ export class RagService {
     }
 
     return rows.map(r => ({ text: r.content, source: r.sourceType as 'pdf' | 'notes' }));
+  }
+
+  // Raw content (not similarity search) for every non-quiz lesson in this
+  // course, from section order 1 up to and including `uptoOrder`. Used for
+  // AI quiz generation, which needs "everything covered so far" rather
+  // than the top-K most-relevant-to-a-query chunks retrieveContext gives.
+  async getContentUpToSection(
+    courseId: string,
+    uptoOrder: number,
+  ): Promise<{ sectionTitle: string; lessonTitle: string; content: string }[]> {
+    const lessons = await this.prisma.lesson.findMany({
+      where: {
+        section: { courseId, order: { lte: uptoOrder } },
+        contentType: { not: 'QUIZ' },
+      },
+      orderBy: [{ section: { order: 'asc' } }, { order: 'asc' }],
+      select: { id: true, title: true, textContent: true, section: { select: { title: true } } },
+    });
+    if (lessons.length === 0) return [];
+
+    const lessonIds = lessons.map(l => l.id);
+    const chunkRows: { lessonId: string; content: string }[] = await this.prisma.$queryRaw`
+      SELECT "lessonId", content FROM lesson_chunks
+      WHERE "lessonId" IN (${Prisma.join(lessonIds)}) AND "sourceType" = 'pdf'
+      ORDER BY "lessonId", "chunkIndex"
+    `;
+
+    const pdfTextByLesson = new Map<string, string[]>();
+    for (const row of chunkRows) {
+      const arr = pdfTextByLesson.get(row.lessonId) ?? [];
+      arr.push(row.content);
+      pdfTextByLesson.set(row.lessonId, arr);
+    }
+
+    return lessons
+      .map(l => ({
+        sectionTitle: l.section.title,
+        lessonTitle: l.title,
+        content: [l.textContent, (pdfTextByLesson.get(l.id) ?? []).join('\n')].filter(Boolean).join('\n\n').trim(),
+      }))
+      .filter(l => l.content.length > 0);
   }
 }

@@ -50,6 +50,8 @@ export const coursesApi = {
     api.patch(`/courses/admin/sections/${sectionId}`, data),
   createLesson: (sectionId: string, data: any) =>
     api.post(`/courses/admin/sections/${sectionId}/lessons`, data),
+  generateSectionQuiz: (sectionId: string) =>
+    api.post(`/courses/admin/sections/${sectionId}/generate-quiz`),
   updateLesson: (lessonId: string, data: any) =>
     api.patch(`/courses/admin/lessons/${lessonId}`, data),
   upsertLessonQuiz: (lessonId: string, data: any) =>

@@ -297,6 +297,7 @@ model Lesson {
   vizType         String?     // for INTERACTIVE_VIZ lessons: 'LINKED_LIST' | 'STACK' | 'QUEUE'
   isPreview       Boolean     @default(false) // free without login
   isMandatory     Boolean     @default(true)
+  isAiGenerated   Boolean     @default(false) // true for auto-generated section quiz lessons
   estimatedMinutes Int?
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt

@@ -3,11 +3,13 @@ import { NotFoundException } from '@nestjs/common';
 import { CoursesService } from './courses.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { RagService } from '../ai/rag/rag.service';
+import { AiService } from '../ai/ai.service';
 
 describe('CoursesService', () => {
   let service: CoursesService;
   let prisma: any;
   let rag: any;
+  let ai: any;
 
   beforeEach(async () => {
     prisma = {
@@ -24,9 +26,18 @@ describe('CoursesService', () => {
       ingestLessonNotes: jest.fn().mockResolvedValue(undefined),
       ingestLessonDocument: jest.fn().mockResolvedValue(undefined),
       deleteChunksForDocument: jest.fn().mockResolvedValue(undefined),
+      getContentUpToSection: jest.fn().mockResolvedValue([]),
+    };
+    ai = {
+      generateQuizQuestions: jest.fn().mockResolvedValue([]),
     };
     const moduleRef = await Test.createTestingModule({
-      providers: [CoursesService, { provide: PrismaService, useValue: prisma }, { provide: RagService, useValue: rag }],
+      providers: [
+        CoursesService,
+        { provide: PrismaService, useValue: prisma },
+        { provide: RagService, useValue: rag },
+        { provide: AiService, useValue: ai },
+      ],
     }).compile();
     service = moduleRef.get(CoursesService);
   });

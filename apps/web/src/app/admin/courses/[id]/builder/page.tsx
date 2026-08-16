@@ -4,7 +4,7 @@
 import { useMemo, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, BookOpen, Check, FileQuestion, Loader2, Plus, Save, Video, User, Mail, Award, GitBranch } from 'lucide-react';
+import { ArrowLeft, BookOpen, Check, FileQuestion, Loader2, Plus, Save, Video, User, Mail, Award, GitBranch, Sparkles } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { coursesApi } from '@/lib/api';
 import { useAdminInstructors, useCourseCertificateTemplate, useUpdateCourseCertificateTemplate, useResetCourseCertificateTemplate, useAdminSiteContent, useRegenerateCertificates } from '@/hooks/use-queries';
@@ -67,6 +67,7 @@ export default function CourseBuilderPage({ params }: { params: { id: string } }
   const queryClient = useQueryClient();
   const [sectionTitle, setSectionTitle] = useState('');
   const [savingSection, setSavingSection] = useState(false);
+  const [regeneratingQuizFor, setRegeneratingQuizFor] = useState<string | null>(null);
   const [lessonForm, setLessonForm] = useState<any>(emptyLesson());
   const [quizForm, setQuizForm] = useState<any>(emptyQuiz());
   const [savingLesson, setSavingLesson] = useState(false);
@@ -210,6 +211,23 @@ export default function CourseBuilderPage({ params }: { params: { id: string } }
       toast.error(err?.response?.data?.message ?? 'Failed to add section');
     } finally {
       setSavingSection(false);
+    }
+  };
+
+  const regenerateSectionQuiz = async (sectionId: string) => {
+    setRegeneratingQuizFor(sectionId);
+    try {
+      const res = await coursesApi.generateSectionQuiz(sectionId);
+      if (res.data) {
+        toast.success('AI quiz generated');
+      } else {
+        toast.error('No lesson content ingested yet for this section — add some lesson notes/PDFs first.');
+      }
+      refresh();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message ?? 'Failed to generate quiz');
+    } finally {
+      setRegeneratingQuizFor(null);
     }
   };
 
@@ -420,10 +438,17 @@ export default function CourseBuilderPage({ params }: { params: { id: string } }
                   <div className="text-white font-semibold text-sm">{section.order}. {section.title}</div>
                   <div className="text-gray-500 text-xs">{section.lessons?.length ?? 0} lessons</div>
                 </div>
-                <button onClick={() => startNewLesson(section.id, (section.lessons?.length ?? 0) + 1)}
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand-orange hover:text-brand-orange-light">
-                  <Plus size={13} /> Lesson
-                </button>
+                <div className="flex items-center gap-3">
+                  <button onClick={() => regenerateSectionQuiz(section.id)} disabled={regeneratingQuizFor === section.id}
+                    title="Auto-generates on every lesson save — click to regenerate on demand"
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand-blue hover:text-brand-blue-light disabled:opacity-50">
+                    {regeneratingQuizFor === section.id ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />} AI Quiz
+                  </button>
+                  <button onClick={() => startNewLesson(section.id, (section.lessons?.length ?? 0) + 1)}
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand-orange hover:text-brand-orange-light">
+                    <Plus size={13} /> Lesson
+                  </button>
+                </div>
               </div>
 
               <div className="divide-y divide-gray-800/70">
@@ -439,7 +464,14 @@ export default function CourseBuilderPage({ params }: { params: { id: string } }
                           : <BookOpen size={15} className="text-gray-500" />}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <div className="text-sm text-white truncate">{lesson.order}. {lesson.title}</div>
+                        <div className="text-sm text-white truncate flex items-center gap-1.5">
+                          {lesson.order}. {lesson.title}
+                          {lesson.isAiGenerated && (
+                            <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-brand-blue bg-brand-blue/10 px-1.5 py-0.5 rounded">
+                              <Sparkles size={9} /> AI
+                            </span>
+                          )}
+                        </div>
                         <div className="flex items-center gap-2 mt-1 text-xs text-gray-500">
                           <span>{lesson.contentType}</span>
                           {lesson.videoUrl && <span>Video set</span>}

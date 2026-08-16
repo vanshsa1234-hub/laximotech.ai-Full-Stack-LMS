@@ -1,13 +1,14 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { RagService } from '../ai/rag/rag.service';
+import { AiService } from '../ai/ai.service';
 import { ContentType, CourseCategory, CourseLevel, Prisma } from '@prisma/client';
 
 @Injectable()
 export class CoursesService {
   private readonly logger = new Logger(CoursesService.name);
 
-  constructor(private prisma: PrismaService, private rag: RagService) {}
+  constructor(private prisma: PrismaService, private rag: RagService, private ai: AiService) {}
 
   private courseSelect = {
     id: true, slug: true, title: true, shortDesc: true, description: true,
@@ -123,7 +124,7 @@ export class CoursesService {
                 id: true, title: true, order: true, contentType: true,
                 videoUrl: true, pdfUrl: true, textContent: true,
                 subtitleHiUrl: true, subtitleEnUrl: true,
-                starterCode: true, isPreview: true, isMandatory: true,
+                starterCode: true, isPreview: true, isMandatory: true, isAiGenerated: true,
                 estimatedMinutes: true, videoDurationSec: true, vizType: true,
                 documents: {
                   orderBy: { order: 'asc' },
@@ -182,6 +183,12 @@ export class CoursesService {
     // Not awaited so lesson creation in the admin UI stays fast.
     this.rag.ingestLessonNotes(lesson.id, section.courseId, lesson.textContent)
       .catch(err => this.logger.error(`RAG ingestion failed for new lesson ${lesson.id}:`, err));
+    // Fire-and-forget: keep this section's AI quiz current with the new content.
+    // Skipped for the quiz lesson itself so saving quiz metadata can't recurse.
+    if (lesson.contentType !== ContentType.QUIZ) {
+      this.generateSectionQuiz(sectionId, { auto: true })
+        .catch(err => this.logger.error(`Auto quiz generation failed for section ${sectionId}:`, err));
+    }
     return lesson;
   }
 
@@ -198,7 +205,81 @@ export class CoursesService {
           .catch(err => this.logger.error(`RAG ingestion failed for lesson ${lessonId}:`, err));
       }
     }
+    // Fire-and-forget: content changed, so this section's AI quiz may be stale.
+    // Skipped for the AI quiz lesson itself to avoid regenerating on its own save.
+    if (!lesson.isAiGenerated) {
+      this.generateSectionQuiz(lesson.sectionId, { auto: true })
+        .catch(err => this.logger.error(`Auto quiz generation failed for section ${lesson.sectionId}:`, err));
+    }
     return lesson;
+  }
+
+  // Generate (or regenerate) the cumulative AI quiz for a section — covers
+  // everything from section order 1 up to and including this section, using
+  // whatever's been ingested into the RAG index so far.
+  // auto=true (fire-and-forget triggers): failures are logged, not thrown,
+  // so a lesson save never breaks because quiz generation had a hiccup.
+  // auto=false (explicit admin "Regenerate" click): failures are thrown so
+  // the admin sees the error instead of silently getting nothing.
+  async generateSectionQuiz(sectionId: string, opts: { auto?: boolean } = {}) {
+    const section = await this.prisma.section.findUnique({
+      where: { id: sectionId },
+      select: { id: true, title: true, order: true, courseId: true, course: { select: { title: true } } },
+    });
+    if (!section) throw new NotFoundException('Section not found.');
+
+    const material = await this.rag.getContentUpToSection(section.courseId, section.order);
+    if (material.length === 0) {
+      this.logger.warn(`Skipped quiz generation for section ${sectionId} — no ingested content yet.`);
+      return null;
+    }
+
+    const materialText = material
+      .map(m => `### ${m.sectionTitle} — ${m.lessonTitle}\n${m.content}`)
+      .join('\n\n');
+
+    // First section reads as an intro/fundamentals check; later sections are
+    // named after their own topic, matching how students expect a "Foundation
+    // Quiz" followed by topic-specific quizzes as they progress.
+    const quizTitle = section.order === 1 ? 'Foundation Quiz' : `${section.title} Quiz`;
+
+    let questions;
+    try {
+      questions = await this.ai.generateQuizQuestions(quizTitle, section.course.title, materialText, 10);
+    } catch (err) {
+      this.logger.error(`AI quiz generation failed for section ${sectionId}:`, err as Error);
+      if (!opts.auto) throw err;
+      return null;
+    }
+    if (questions.length === 0) return null;
+
+    // Reuse the existing AI-generated quiz lesson for this section if one
+    // exists, rather than creating a new lesson every regeneration.
+    let quizLesson = await this.prisma.lesson.findFirst({
+      where: { sectionId, contentType: ContentType.QUIZ, isAiGenerated: true },
+    });
+
+    if (!quizLesson) {
+      const order = (await this.prisma.lesson.count({ where: { sectionId } })) + 1;
+      quizLesson = await this.prisma.lesson.create({
+        data: {
+          sectionId, title: quizTitle, order, contentType: ContentType.QUIZ,
+          isAiGenerated: true, isMandatory: true, estimatedMinutes: 10,
+        },
+      });
+      await this.recalcTotalLessons(section.courseId);
+    } else if (quizLesson.title !== quizTitle) {
+      quizLesson = await this.prisma.lesson.update({ where: { id: quizLesson.id }, data: { title: quizTitle } });
+    }
+
+    const quiz = await this.upsertLessonQuiz(quizLesson.id, {
+      title: quizTitle,
+      passingScore: 70,
+      isFinalExam: false,
+      questions: questions.map((q, i) => ({ ...q, order: i + 1 })),
+    });
+
+    return { lesson: quizLesson, quiz };
   }
 
   // Admin: add a document (notes/slides/PDF/etc) to a lesson. Fully optional —

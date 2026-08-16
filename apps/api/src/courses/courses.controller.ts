@@ -47,6 +47,14 @@ export class CoursesController {
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN, Role.INSTRUCTOR)
+  @Post('admin/sections/:sectionId/generate-quiz')
+  generateSectionQuiz(@Param('sectionId') sectionId: string) {
+    return this.courses.generateSectionQuiz(sectionId, { auto: false });
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN, Role.INSTRUCTOR)
   @Post('admin/sections/:sectionId/lessons')
   createLesson(@Param('sectionId') sectionId: string, @Body() body: any) {
     return this.courses.createLesson(sectionId, body);
