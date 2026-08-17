@@ -187,6 +187,7 @@ This runs both apps in parallel via Turborepo:
 | `JUDGE0_API_URL` / `JUDGE0_API_KEY` | ❌ | Code playground execution                        |
 
 
+
 ALL the feature are working Just put the API Key in the .env and use it  
 
 ### `apps/web/.env.local`
